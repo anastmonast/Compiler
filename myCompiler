@@ -1,1 +1,10 @@
-kalimera
+#!/usr/bin/env python3
+
+# Despoina Kotsidou       2475
+# Anastasia Monastiridou  2488
+#
+#
+#
+
+
+def bubbleSort(arr):
