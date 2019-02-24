@@ -3,8 +3,81 @@
 # Despoina Kotsidou       2475
 # Anastasia Monastiridou  2488
 #
-#
-#
+
+file_to_compile = ' '
+
+import sys
 
 
-def bubbleSort(arr):
+def lex():
+
+    my_list = []
+    state = 0
+    recog = -1;
+    error = -2;
+
+    if len(sys.argv) != 2:
+        print ("Wtf with the arguments")
+        exit(0)
+
+    file_to_compile = sys.argv[1]
+    file = open(file_to_compile, 'r')
+    while (state!=recog) and (state!=error):
+
+        symbol = file.read(1)
+        if state == 0:
+            if symbol.isalpha():
+                state = 1
+            elif symbol.isdigit():
+                state = 2
+            elif symbol == '<':
+                state = 3
+            elif symbol == '>':
+                state = 4
+            elif symbol == ':':
+                state = 5
+            elif symbol =='{':
+                state = 6
+            elif symbol in ('+', '-', '*', '/', '=', ',', ';', '(', ')', '[', ']'):
+                state = recog
+            elif symbol == '':   # EOF
+                state = recog
+            else:
+                state = error
+        elif state == 1:
+            if not((symbol.isalpha()) or (symbol.isdigit())):
+                state = recog
+                #na paei pisw
+        elif state == 2:
+            if not (symbol.isdigit()):
+                state = recog
+                #back
+        elif state == 3:
+            if not(symbol in ('=', '>')):
+                print ("back")
+                #back
+            state = recog
+        elif state == 4:
+            if not(symbol == '='):
+                print ("back")
+                #back
+            state = recog
+        elif state == 5:
+            if not(symbol == '='):
+                print ("ERROR missing =")
+                exit(0)
+            state = recog
+        elif state ==6:
+            if symbol == '}':
+                state = 0;
+            elif symbol == '':
+                state = error
+                print ("ERROR missing }")
+                exit(0)
+            else:
+                print ()
+
+    print ("Number of arg:", len(sys.argv), "arguments")
+    print ("Argument List:", str(sys.argv))
+
+lex()
