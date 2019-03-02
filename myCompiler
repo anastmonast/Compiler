@@ -61,240 +61,483 @@ MINUS       = 43
 TIMES       = 44
 DIV         = 45
 SEMICOL     = 46
+COMMA		= 47
 
-ID          = 47
-NUMBER      = 48
+ID          = 48
+NUMBER      = 49
 
+
+token = ''
 
 class Token:
-    def __init__(self, mylist1, typ):
-        self.mylist1 = mylist1
-        self.typ = typ
+	def __init__(self, mylist1, typ):
+		self.mylist1 = mylist1
+		self.typ = typ
 
 def program():
-    print()
+	print()
 
 def block():
-    print()
+	print()
 
 def declaration():
-    print()
+	print()
 
 def varlist():
-    print()
+	print()
 
 def subprograms():
-    print()
+	print()
 
 def subprogram():
-    print()
+	print()
 
 def funcbody():
-    print()
+	print()
 
 def formalpars():
-    print()
+	print()
 
 def formalparlist():
-    print()
+	print()
 
 def formalparitem():
-    print()
+	print()
 
 def statements():
-    print()
+	print()
 
 def statement():
-    print()
+	print()
 
 def assignmentStat():
-    print()
+	print()
 
 def ifStat():
-    print()
+	if token.typ == IF:
+		lex()
+		if token.typ == LEFTPARENTH:
+			lex()
+			condition()
+			lex()
+			if not(token.typ == RIGHTPARENTH):
+				print('File: ', file_to_compile)
+				print("ERROR: ' ) ' expected")
+			lex()
+			if token.typ == THEN:
+				lex()
+				statements()
+				lex()
+				elsepart()
+				lex()
+				if not(token.typ == ENDIF):
+					print('File: ', file_to_compile )
+					print("ERROR: ' endif ' expected")
+
+			else:
+				print('File: ', file_to_compile )
+				print("ERROR: ' then ' expected")
+		else:
+			print('File: ', file_to_compile )
+			print("ERROR: ' ( ' expected")
 
 def elsepart():
-    print()
+	if token.typ == ELSE:
+		lex()
+		statements()
 
 def whileStat():
-    print()
+	if token.typ == WHILE:
+		lex()
+		if token.typ == LEFTPARENTH:
+			lex()
+			condition()
+			lex()
+			if not(token.typ == RIGHTPARENTH):
+				print('File: ', file_to_compile)
+				print("ERROR: ' ) ' expected")
+			lex()
+			statements()
+			lex()
+			if not(token.typ == ENDWHILE):
+				print('File: ', file_to_compile )
+				print("ERROR: ' endwhile ' expected")
+
+		else:
+			print('File: ', file_to_compile )
+			print("ERROR: ' ( ' expected")
+	else:
+		print('File: ', file_to_compile )
+		print ("ERROR: ' while ' expected")
+
 
 def doWhileStat():
-    print()
+	if token.typ == DO:
+		lex()
+		statements()
+		lex()
+		if token.typ == WHILE:
+			lex()
+			if token.typ == LEFTPARENTH:
+				lex()
+				condition()
+				lex()
+				if not(token.typ == RIGHTPARENTH):
+					print('File: ', file_to_compile )
+					print("ERROR: ' ) ' expected")
+			else:
+				print('File: ', file_to_compile )
+				print("ERROR: ' ( ' expected")
+		else:
+			print('File: ', file_to_compile )
+			print ("ERROR: ' while ' expected")
+	else:
+		print('File: ', file_to_compile )
+		print ("ERROR: ' do ' expected")
+
 
 def loopStat():
-    print()
+	if token.typ == LOOP:
+		lex()
+		statements()
+		lex()
+		if not(token.typ == ENDLOOP):
+			print('File: ', file_to_compile )
+			print ("ERROR: ' endloop ' expected")
+	else:
+		print('File: ', file_to_compile )
+		print ("ERROR: ' loop ' expected")
 
 def exitStat():
-    print()
+	if not(token.typ == EXIT):
+		print('File: ', file_to_compile )
+		print ("ERROR: ' exit ' expected")
 
 def forcaseStat():
-    print()
+	if token.typ == FORCASE:
+		lex()
+		while token.typ == WHEN:
+			lex()
+			afterWhen()
+			lex()
+		if token.typ == DEFAULT:
+			lex()
+			if token.typ == ':':
+				lex()
+				statements()
+				lex()
+				if not(token.typ == ENDDEFAULT):
+					print('File: ', file_to_compile )
+					print ("ERROR: ' enddefault ' expected")
+			else:
+				print('File: ', file_to_compile )
+				print ("ERROR: ' : ' expected")
+		else:
+			print('File: ', file_to_compile )
+			print ("ERROR: ' default ' expected")
+		lex()
+			
+		if not(token.typ == ENDFORCASE):
+			print('File: ', file_to_compile )
+			print ("ERROR: ' endforcase ' expected")
+
+
+def afterWhen():
+	if token.typ == LEFTPARENTH:
+		lex()
+		condition()
+		lex()
+		if token.typ == RIGHTPARENTH:
+			lex()
+			if token.typ == ':':
+				lex()
+				statements()
+			else:
+				print('File: ', file_to_compile )
+				print ("ERROR: ' : ' expected")
+		else:
+			print('File: ', file_to_compile )
+			print ("ERROR: ' ) ' expected")
+	else:
+		print('File: ', file_to_compile )
+		print ("ERROR: ' ( ' expected")
+
 
 def incaseStat():
-    print()
+	if token.typ == INCASE:
+		lex()
+		while token.typ == WHEN:
+			lex()
+			afterWhen()
+			lex()
+		if not(token.typ == ENDINCASE):
+			print('File: ', file_to_compile )
+			print ("ERROR: ' endincase ' expected")
 
 def returnStat():
-    print()
+	lex()
+	expression()
 
 def printStat():
-    print()
+	lex()
+	expression()
 
 def inputStat():
-    print()
+	if token.typ == INPUT:
+		lex()
+		if not(token.typ == ID):
+			print('File: ', file_to_compile )
+			print ("ERROR: ID expected")
+	else:
+		print('File: ', file_to_compile )
+		print ("ERROR: input expected")
+
 
 def actualpars():
-    print()
+	if token.typ == LEFTPARENTH:
+		lex()
+		actualparlist()
+		lex()
+		if not(token.typ == RIGHTPARENTH):
+			print ("ERROR ) expected")
+	else:
+		print('File: ', file_to_compile )
+		print ("ERROR: ( expected")
 
 def actualparlist():
-    print()
+	if token.typ == IN or token.typ == INOUT or token.typ == INANDOUT:
+		actualparitem()
+		lex()
+		while token.typ == COMMA:
+			lex()
+			actualparitem()
+			lex()
 
 def actualparitem():
-    print()
+	if token.typ == IN:
+		lex()
+		expression()
+	elif token.typ == INOUT:
+		lex()
+		if not(token.typ == ID):
+			print('File: ', file_to_compile )
+			print ("ERROR: After inout, ID expected")
 
-def actualparitem():
-    print()
+	elif token.typ == INANDOUT:
+		lex()
+		if not(token.typ == ID):
+			print('File: ', file_to_compile )
+			print ("ERROR: After inandout, ID expected")
+	else:
+		print('File: ', file_to_compile )
+		print ("ERROR: in/inout/inandout expected")
+
 
 def condition():
-    print()
+	boolterm()
+	lex()
+	while token.typ == OR:
+		lex()
+		boolterm()
+		lex()
+
 
 def boolterm():
-    print()
+	boolfactor()
+	lex()
+	while token.typ == AND:
+		lex()
+		boolfactor()
+		lex()
+
 
 def boolfactor():
-    print()
-
+	if token.typ == NOT:
+		lex()
+		if token.typ == LEFTBRACK:
+			lex()
+			condition()
+			lex()
+			if not(token.typ == RIGHTBRACK):
+				print('File: ', file_to_compile )
+				print ("ERROR: ] expected")
+		else:
+				print('File: ', file_to_compile )
+				print ("ERROR: [ expected")
+	elif token.typ == LEFTBRACK:
+			lex()
+			condition()
+			lex()
+			if not(token.typ == RIGHTBRACK):
+				print('File: ', file_to_compile )
+				print ("ERROR: ] expected")
+	else:
+		expression()
+		lex()
+		relationOper()
+		lex()
+		expression()
+	   
 def expression():
-    print()
+	optionalSign()
+	lex()
+	term()
+	lex()
+	while (token.typ == PLUS) or (token.typ == MINUS):
+		addOper()
+		lex()
+		term()
+		lex()
 
 def term():
-    print()
+	factor()
+	lex()
+	while (token.typ == TIMES) or (token.typ == DIV):
+		mulOper()
+		lex()
+		factor()
+		lex()
 
 def factor():
-    print()
+	if token.typ == LEFTPARENTH:
+		lex()
+		expression()
+		lex()
+		if not(token.typ == RIGHTPARENTH):
+			print('File: ', file_to_compile )
+			print ("ERROR: ) expected")
+			
+	elif token.typ == ID:
+		lex()
+		idtail()
 
 def idtail():
-    print()
+	if token.typ == LEFTPARENTH:
+		actualpars()
 
 def relationOper():
-    print()
-
+	if not((token.typ == EQUALS) or (token.typ == LESSEQ) or (token.typ == BIGEQ) or (token.typ == BIGGER) or (token.typ == LESS) or (token.typ == DIFF)):
+		print('File: ', file_to_compile )
+		print("ERROR: <relational oper> expected")
 def addOper():
-    print()
+	if not((token.typ == PLUS) or (token.typ == MINUS)):
+		print('File: ', file_to_compile )
+		print ("ERROR: (+) or (-) expected")
 
 def mulOper():
-    print()
+	if not((token.typ == TIMES) or (token.typ == DIV)):
+		print('File: ', file_to_compile )
+		print ("ERROR: (*) or (/) expected")
 
 def optionalSign():
-    print()
+	if  (token.typ == PLUS) or (token.typ == MINUS):
+		addOper()
 
 
 
 def setWordType(mylist):
 
-    if (mylist.isdigit()):
-        print("NUM 76")
-        return NUMBER
+	if (mylist.isdigit()):
+		return NUMBER
 
-    if (mylist.isalpha()):
-        print("AL 80")
-        if mylist == 'program':
-            return PROGR
-        elif mylist == 'endprogram':
-            return ENDPROG
-        elif mylist == 'declare':
-            return DECLAR
-        elif mylist == 'function':
-            return FUNC 
-        elif mylist == 'endfunction':
-            return ENDFUNC
-        elif mylist == 'in':
-            return IN 
-        elif mylist == 'inout':
-            return INOUT
-        elif mylist == 'inandout':
-            return INANDOUT
-        elif mylist == 'if':
-            return IF
-        elif mylist == 'then':
-            return THEN
-        elif mylist == 'endif':
-            return ENDIF
-        elif mylist == 'else':
-            return ELSE
-        elif mylist == 'while':
-            return WHILE
-        elif mylist == 'endwhile':
-            return ENDWHILE
-        elif mylist == 'do':
-            return DO
-        elif mylist == 'loop':
-            return LOOP
-        elif mylist == 'endloop':
-            return ENDLOOP
-        elif mylist == 'exit':
-            return EXIT
-        elif mylist == 'forcase':
-            return FORCASE
-        elif mylist == 'when':
-            return WHEN
-        elif mylist == 'default':
-            return DEFAULT
-        elif mylist == 'enddefault':
-            return ENDDEFAULT
-        elif mylist == 'endforcase':
-            return ENDFORCASE
-        elif mylist == 'incase':
-            return INCASE
-        elif mylist == 'endincase':
-            return ENDINCASE
-        elif mylist == 'return':
-            return RETURN
-        elif mylist == 'print':
-            return PRINT
-        elif mylist == 'input':
-            return INPUT
-        elif mylist == 'or':
-            return OR
-        elif mylist == 'and':
-            return AND
-        elif mylist == 'not':
-            return NOT
-        else:
-            return ID
+	if (mylist.isalpha()):
+		if mylist == 'program':
+			return PROGR
+		elif mylist == 'endprogram':
+			return ENDPROG
+		elif mylist == 'declare':
+			return DECLAR
+		elif mylist == 'function':
+			return FUNC 
+		elif mylist == 'endfunction':
+			return ENDFUNC
+		elif mylist == 'in':
+			return IN 
+		elif mylist == 'inout':
+			return INOUT
+		elif mylist == 'inandout':
+			return INANDOUT
+		elif mylist == 'if':
+			return IF
+		elif mylist == 'then':
+			return THEN
+		elif mylist == 'endif':
+			return ENDIF
+		elif mylist == 'else':
+			return ELSE
+		elif mylist == 'while':
+			return WHILE
+		elif mylist == 'endwhile':
+			return ENDWHILE
+		elif mylist == 'do':
+			return DO
+		elif mylist == 'loop':
+			return LOOP
+		elif mylist == 'endloop':
+			return ENDLOOP
+		elif mylist == 'exit':
+			return EXIT
+		elif mylist == 'forcase':
+			return FORCASE
+		elif mylist == 'when':
+			return WHEN
+		elif mylist == 'default':
+			return DEFAULT
+		elif mylist == 'enddefault':
+			return ENDDEFAULT
+		elif mylist == 'endforcase':
+			return ENDFORCASE
+		elif mylist == 'incase':
+			return INCASE
+		elif mylist == 'endincase':
+			return ENDINCASE
+		elif mylist == 'return':
+			return RETURN
+		elif mylist == 'print':
+			return PRINT
+		elif mylist == 'input':
+			return INPUT
+		elif mylist == 'or':
+			return OR
+		elif mylist == 'and':
+			return AND
+		elif mylist == 'not':
+			return NOT
+		else:
+			return ID
 
-    if mylist == '(':
-        return LEFTPARENTH
-    elif mylist == ')':
-        return RIGHTPARENTH
-    elif mylist == '[':
-        return LEFTBRACK
-    elif mylist == ']':
-        return RIGHTBRACK
-    elif mylist == '=':
-        return EQUALS
-    elif mylist == '<':
-        return LESS
-    elif mylist == '>':
-        return BIGGER
-    elif mylist == '<>':
-        return DIFF
-    elif mylist == '<=':
-        return LESSEQ
-    elif mylist == '>=':
-        return BIGEQ
-    elif mylist == '+':
-        return PLUS
-    elif mylist == '-':
-        return MINUS
-    elif mylist == '*':
-        return TIMES
-    elif mylist == '/':
-        return DIV
-    elif mylist == ';':
-        return SEMICOL
-    else:
-        return ID
+	if mylist == '(':
+		return LEFTPARENTH
+	elif mylist == ')':
+		return RIGHTPARENTH
+	elif mylist == '[':
+		return LEFTBRACK
+	elif mylist == ']':
+		return RIGHTBRACK
+	elif mylist == '=':
+		return EQUALS
+	elif mylist == '<':
+		return LESS
+	elif mylist == '>':
+		return BIGGER
+	elif mylist == '<>':
+		return DIFF
+	elif mylist == '<=':
+		return LESSEQ
+	elif mylist == '>=':
+		return BIGEQ
+	elif mylist == '+':
+		return PLUS
+	elif mylist == '-':
+		return MINUS
+	elif mylist == '*':
+		return TIMES
+	elif mylist == '/':
+		return DIV
+	elif mylist == ';':
+		return SEMICOL
+	else:
+		return ID
 
 
 ########################################################
@@ -306,100 +549,89 @@ def setWordType(mylist):
 
 def lex():
 
-    a = 'aa'
-    if a.isalpha():
-        print ("KALIEMRA")
+	my_list = []
+	state   = 0
+	recog   = -1
+	error   = -2
+	goback  = 0
+	endfile = 0
 
-    my_list = []
-    state   = 0
-    recog   = -1
-    error   = -2
-    goback  = 0
-    endfile = 0
+	if len(sys.argv) != 2:
+		print ("Wtf with the arguments")
+		exit(0)
 
-    if len(sys.argv) != 2:
-        print ("Wtf with the arguments")
-        exit(0)
+	global file_to_compile
+	file_to_compile = sys.argv[1]
+	file = open(file_to_compile, 'r')
+	while (state!=recog) and (state!=error):
 
-    file_to_compile = sys.argv[1]
-    file = open(file_to_compile, 'r')
-    while (state!=recog) and (state!=error):
+		symbol = file.read(1)
+		my_list.append(symbol)
 
-        symbol = file.read(1)
-        my_list.append(symbol)
+		if state == 0:
+			if symbol.isalpha():
+				state = 1
+			elif symbol.isdigit():
+				state = 2
+			elif symbol == '<':
+				state = 3
+			elif symbol == '>':
+				state = 4
+			elif symbol == ':':
+				state = 5
+			elif symbol in ('+', '-', '*', '/', '=', ',', ';', '(', ')', '[', ']'):
+				state = recog
+			elif symbol == '':   # EOF
+				endfile = 1
+				state = recog
+			else:
+				state = error
+		elif state == 1:
+			if not((symbol.isalpha()) or (symbol.isdigit())):   # word
+				state = recog
+				goback = 1
+				#na paei pisw
+		elif state == 2:
+			if not (symbol.isdigit()):  # number
+				state = recog
+				goback = 1
+				#back
+		elif state == 3:
+			if not(symbol in ('=', '>')):
+				print ("back")
+				goback = 1
+				#back
+			state = recog
+		elif state == 4:
+			if not(symbol == '='):
+				print ("back")
+				goback = 1;
+				#back
+			state = recog
+		elif state == 5:
+			if not(symbol == '='):
+				goback = 1\
+				#back
+			state = recog
 
-        if state == 0:
-            if symbol.isalpha():
-                state = 1
-            elif symbol.isdigit():
-                state = 2
-            elif symbol == '<':
-                state = 3
-            elif symbol == '>':
-                state = 4
-            elif symbol == ':':
-                state = 5
-            elif symbol =='{':
-                state = 6
-            elif symbol in ('+', '-', '*', '/', '=', ',', ';', '(', ')', '[', ']'):
-                state = recog
-            elif symbol == '':   # EOF
-                endfile = 1
-                state = recog
-            else:
-                state = error
-        elif state == 1:
-            if not((symbol.isalpha()) or (symbol.isdigit())):   # word
-                state = recog
-                goback = 1;
-                #na paei pisw
-        elif state == 2:
-            if not (symbol.isdigit()):  # number
-                state = recog
-                goback = 1;
-                #back
-        elif state == 3:
-            if not(symbol in ('=', '>')):
-                print ("back")
-                goback = 1;
-                #back
-            state = recog
-        elif state == 4:
-            if not(symbol == '='):
-                print ("back")
-                goback = 1;
-                #back
-            state = recog
-        elif state == 5:
-            if not(symbol == '='):
-                print ("ERROR missing =")
-                exit(0)
-            state = recog
-        elif state ==6:
-            if symbol == '}':
-                state = 0;
-            elif symbol == '':  # EOF
-                endfile = 1
-                state = error
-                print ("ERROR missing }")
-                exit(0)
-            else:
-                print ()
+	if goback:
+		del my_list[-1]
+		if not(endfile):
+			file.seek(file.tell() - 1)
 
-    if goback:
-        del my_list[-1]
-        if not(endfile):
-            file.seek(file.tell() - 1)
+	my_list = ''.join(my_list)
+	typ = setWordType(my_list)
+	if state == recog:
+		global token
+		token = Token(my_list, typ)
+	   # PROBLEM ECOUME ENTO
 
-    my_list = ''.join(my_list)
-    typ = setWordType(my_list)
-    if state == recog:
-        token = Token(my_list, typ)
-       # PROBLEM ECOUME ENTO
-    
+	print(token.mylist1)
+	optionalSign()
+	
 
-    print ("Number of arg:", len(sys.argv), "arguments")
-    print ("Argument List:", str(sys.argv))
+	print ("Number of arg:", len(sys.argv), "arguments")
+	print ("Argument List:", str(sys.argv))
 
 
 lex()
