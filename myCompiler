@@ -62,9 +62,11 @@ TIMES       = 44
 DIV         = 45
 SEMICOL     = 46
 COMMA		= 47
+COLON		= 48
+ASSIGN 		= 49
 
-ID          = 48
-NUMBER      = 49
+ID          = 50
+NUMBER      = 51
 
 
 token = ''
@@ -75,43 +77,163 @@ class Token:
 		self.typ = typ
 
 def program():
-	print()
+	if token.typ == PROGR:
+		lex()
+		if not(token.typ == ID):
+			print('File: ', file_to_compile )
+			print ("ERROR: ' ID ' expected")
+		lex()
+		block()
+		lex()
+		if not(token.typ == ENDPROG):
+			print('File: ', file_to_compile )
+			print ("ERROR: ' endprogram ' expected")
+	else:
+		print('File: ', file_to_compile )
+		print ("ERROR: ' program ' expected")
+
 
 def block():
-	print()
+	declaration()
+	lex()
+	subprograms()
+	lex()
+	statements()
 
 def declaration():
-	print()
+	while token.typ == DECLAR:
+		lex()
+		varlist()
+		lex()
+		if not(token.typ == SEMICOL):
+			print('File: ', file_to_compile )
+			print ("ERROR: ' ; ' expected")
+		lex()
 
 def varlist():
-	print()
+	if token.typ == ID:
+		lex()
+		while token.typ == COMMA:
+			lex()
+			if not(token.typ == ID):
+				print('File: ', file_to_compile )
+				print ("ERROR: ' ID ' expected")
+			lex()
 
 def subprograms():
-	print()
+	while token.typ == FUNC:
+		subprogram()
+		lex()
 
 def subprogram():
-	print()
+	if token.typ == FUNC:
+		lex()
+		if not(token.typ == ID):
+			print('File: ', file_to_compile )
+			print ("ERROR: ' ID ' expected")
+		lex()
+		funcbody()
+		lex()
+		if not(token.typ == ENDFUNC):
+			print('File: ', file_to_compile )
+			print ("ERROR: ' endfunction ' expected")
+
 
 def funcbody():
-	print()
+	formalpars()
+	lex()
+	block()
 
 def formalpars():
-	print()
+	if token.typ == LEFTPARENTH:
+		formalparlist()
+		lex()
+		if not(token.typ == RIGHTPARENTH):
+			print('File: ', file_to_compile )
+			print ("ERROR: ' ) ' expected")
+	else:
+		print('File: ', file_to_compile )
+		print ("ERROR: ' (  ) ' expected")
+
 
 def formalparlist():
-	print()
+	if token.typ == IN or token.typ == INOUT or token.typ == INANDOUT:
+		formalparitem()
+		lex()
+		while token.typ == COMMA:
+			lex()
+			formalparitem()
+			lex()
 
 def formalparitem():
-	print()
+	if token.typ == IN:
+		lex()
+		if not(token.typ == ID):
+			print('File: ', file_to_compile )
+			print ("ERROR: After in, ID expected")
+	elif token.typ == INOUT:
+		lex()
+		if not(token.typ == ID):
+			print('File: ', file_to_compile )
+			print ("ERROR: After inout, ID expected")
+
+	elif token.typ == INANDOUT:
+		lex()
+		if not(token.typ == ID):
+			print('File: ', file_to_compile )
+			print ("ERROR: After inandout, ID expected")
+	else:
+		print('File: ', file_to_compile )
+		print ("ERROR: in/inout/inandout id expected")
+
 
 def statements():
-	print()
+	statement()
+	lex()
+	while token.typ == SEMICOL:
+		lex()
+		statement()
+		lex()
 
 def statement():
-	print()
+	if token.typ == ID:
+		assignmentStat()
+	elif token.typ == IF:
+		ifStat()
+	elif token.typ == WHILE:
+		whileStat()
+	elif token.typ == DO:
+		doWhileStat()
+	elif token.typ == LOOP:
+		loopStat()
+	elif token.typ == EXIT:
+		exitStat()
+	elif token.typ == FORCASE:
+		forcaseStat()
+	elif token.typ == INCASE:
+		incaseStat()
+	elif token.typ == RETURN:
+		returnStat()
+	elif token.typ == INPUT:
+		inputStat()
+	elif token.typ == PRINT:
+		printStat()
 
 def assignmentStat():
-	print()
+	if token.typ == ID:
+		lex()
+		if token.typ == ':':
+			lex()
+			if token.typ == EQUALS:
+				lex()
+				expression()
+		else:
+			print('File: ', file_to_compile)
+			print("ERROR: ' = ' expected")
+	else:
+		print('File: ', file_to_compile)
+		print("ERROR: ' ID ' expected")
+
 
 def ifStat():
 	if token.typ == IF:
@@ -536,6 +658,10 @@ def setWordType(mylist):
 		return DIV
 	elif mylist == ';':
 		return SEMICOL
+	elif mylist == ':':
+		return COLON
+	elif mylist == ':=':
+		ASSIGN
 	else:
 		return ID
 
@@ -610,7 +736,7 @@ def lex():
 			state = recog
 		elif state == 5:
 			if not(symbol == '='):
-				goback = 1\
+				goback = 1
 				#back
 			state = recog
 
