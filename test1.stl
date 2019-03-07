@@ -1,0 +1,21 @@
+program test1
+	declare a,b,c,d;
+	function t(in b, inout c)
+		declare e;
+			if ( not [a<b or a=9] and [a<9] ) then
+				forcase
+					when (a>9) :
+						default: 
+							incase
+								endincase
+						enddefault
+				endforcase
+			else
+				loop 
+					return 3*(3/b) + (2*4)
+				endloop
+			endif
+	endfunction
+
+endprogram			
+
