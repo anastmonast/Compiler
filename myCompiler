@@ -82,15 +82,26 @@ NUMBER      = 55
 
 
 
-class Token:
-    def __init__(self, mylist1, typ, lin):
-        self.mylist1= mylist1
-        self.typ    = typ
-        self.lin    = lin
+class Token: #Class for defining token, type of "word" found from lex  and used from the syntax analyser
+    def __init__(self, mylist1, typ, lin):  
+        self.mylist1= mylist1  #list of the current word being in process when lex is done 
+        self.typ    = typ #the "type" of word found from lex
+        self.lin    = lin #current line of file being compiled 
 
-token = ''
+token = '' #we will keep the token's value here
 
-def program():
+########################################################
+#                                                      #
+#                 SYNTAX ANALYSER                      #
+#                                                      #                
+########################################################
+
+#Implementation of the grammatical model of the language "Starlet".
+
+#The program exits if a syntax error has been found, showing the user the type of error and the line of error occurance.
+
+
+def program(): #The begining of the syntax analyser.
 
     if token.typ == PROGR:
         lex()
@@ -472,7 +483,7 @@ def forcaseStat():
             print ("ERROR: ' default ' expected")
             exit(0)
 
-def afterWhen():
+def afterWhen(): #Function-helper for what follows the "reserved" word "when". 
     if token.typ == LEFTPARENTH:
         lex()
         condition()
@@ -510,12 +521,12 @@ def incaseStat():
             print ("ERROR: ' endincase ' expected")
         lex()
 
-def returnStat():	# called
-    lex()   		# if token == return
+def returnStat():   # called
+    lex()           # if token == return
     expression()
 
-def printStat():	# called
-    lex()       	# if token == print
+def printStat():    # called
+    lex()           # if token == print
     expression()
 
 def inputStat():
@@ -665,16 +676,17 @@ def relationOper():
         exit(0)
     lex()
 
-def addOper():		# called if token + or -
+def addOper():      # called if token + or -
     lex()
 
-def mulOper():		# called if token * or /
+def mulOper():      # called if token * or /
     lex()
 
 def optionalSign():
     if  (token.typ == PLUS) or (token.typ == MINUS):
         addOper()
 
+###  Setting the word type by checking if the word is a reserved word, a reserved symbol, number or a plain id.
 
 def setWordType(mylist):
 
@@ -796,20 +808,20 @@ def setWordType(mylist):
 
 ########################################################
 #                                                      #
-#                 LECTICAL ANALYSER                    #
+#                 LEXICAL ANALYSER                    #
 #                                                      #                
 ########################################################
-# na valoume ta // sta states
+
 
 def lex():
 
-    my_list = []
+    my_list = [] #List of found "word"
     state   = 0
     recog   = -1
     error   = -2
     goback  = 0
 
-    if len(sys.argv) != 2:
+    if len(sys.argv) != 2:  #The arguments need to consist of this file (MyCompiler.py) and a file to compile.
         print ("I need a file to compile")
         exit(0)
 
@@ -819,21 +831,23 @@ def lex():
     global firsttime
     global line
     
-    if firsttime==0:        # open file ones
+    if firsttime==0:        #The file needs to open once. This variable changes value only once, so as the file.
         file_to_compile = sys.argv[1]
         file = open(file_to_compile, 'r')
         firsttime = 1
 
-    while (state!=recog) and (state!=error):
+    while (state!=recog) and (state!=error): # Keep looping if the finite automaton hasn't reached it's final state or, if no errors have occured.
 
-        symbol = file.read(1)   # read one char per loop
+        symbol = file.read(1)   # Read one char per loop.
 
-        if symbol == '\n':      # count .stl's lines 
+        if symbol == '\n':      # Counter for the number of lines in the .stl file.
             line = line + 1
 
-        my_list.append(symbol)
+        my_list.append(symbol) # Add char in the list of "word".
+        
+        ## Begining of the finite automaton, to determine if the "word" is acceptable. Stops once a word is found, or an error has occured. 
 
-        if state == 0:         # arxiki 
+        if state == 0:         # First state of the finite automaton.
             if symbol.isalpha():
                 state = 1
             elif symbol.isdigit():
@@ -848,10 +862,10 @@ def lex():
                 state = recog
             elif symbol == '/':
                 state = 6
-            elif symbol == '':   # EOF
+            elif symbol == '':   #Checking if the EOF (end of file) has been reached.
                 endfile = 1
                 state = recog
-            elif symbol.isspace():
+            elif symbol.isspace(): #Delete unwanted spaces from the list.
                 del my_list[-1]
             else:
                 state = error
@@ -898,9 +912,9 @@ def lex():
         elif state == 8:    # comments /*
             if symbol == '*':
                 state = 9 
-            elif symbol == '':	# EOF 
-            	print("ERROR in comments: ' */ ' missing")
-            	exit(0)        
+            elif symbol == '':  # EOF 
+                print("ERROR in comments: ' */ ' missing")
+                exit(0)        
         elif state == 9:    # end comments */
             if symbol == '/':
                 state = 0
@@ -908,28 +922,29 @@ def lex():
             else:
                 state = 8
 
-    if goback:          # delete last char from my_list
+    if goback:          # Deletion of last char from my_list and unreading a char from the file, if the char was unneeded for the current word. (ex: Begining of some other word)
         del my_list[-1]
         if not(endfile):
             file.seek(file.tell() - 1)
 
-    my_list = ''.join(my_list)  # enwnoume tous xaraktires
-                                # se ena string
+    my_list = ''.join(my_list)  #Joining all the chars into the list.
+                                
 
-    if my_list.isdigit():   # if number check if 0 to 32767
+    if my_list.isdigit():   #In case a number was found, check if it's acceptable. Acceptable numbers : lesser than 32767.
         if (int(my_list) > 32767):
             print("ERROR: Invalid number near line: ", line - 1)
             print("Acceptable numbers: 0 to 32767")
             exit(0)
 
 
-    typ = setWordType(my_list)  # set token types
-    if state == recog:
+    typ = setWordType(my_list)  # Set the type of word found (now known as token), which is held in the list.
+    if state == recog: # Set all token parameters only if the automaton has reached it's finite state (a word has been found).
         global token
         token = Token(my_list, typ, line)
 
     print(token.mylist1, token.typ)
  
 
-lex()
-program()
+lex()     #Call the lexical analyser to jumpstart the process. After the first word has been found,
+program() #the syntax analyser is called to continue. lex() is called when needed another word in the syntax
+          #analyser. The syntax analyser checks if the grammar of the language is correct.
