@@ -5,48 +5,53 @@
 
 import sys
 file_to_compile = ' '
-file = ' '
-firsttime = [0]
-
-# ta // mi ksexasoume
+firsttime   = 0
+endfile     = 0
+line        = 0
 
 #############################
 #                           #
 #       TOKEN TYPES         #
 #                           #
 #############################
-
 PROGR       = 1
 ENDPROG     = 2
 DECLAR      = 3
 FUNC        = 4
-ENDFUNC     = 5
+ENDFUNC     = 5 
 IN          = 6
 INOUT       = 7
 INANDOUT    = 8
+
+###        STATEMENTS         ###
+
 IF          = 9
-THEN        = 10
-ENDIF       = 11
-ELSE        = 12
-WHILE       = 13
-ENDWHILE    = 14
-DO          = 15
-LOOP        = 16
-ENDLOOP     = 17
-EXIT        = 18
-FORCASE     = 19
+WHILE       = 10
+DOWHILE     = 11
+LOOP        = 12
+EXIT        = 13
+FORCASE     = 14
+INCASE      = 15
+RETURN      = 16
+PRINT       = 17
+INPUT       = 18
+#################################
+
+ENDWHILE    = 19
 WHEN        = 20
 DEFAULT     = 21
 ENDDEFAULT  = 22
 ENDFORCASE  = 23
-INCASE      = 24
+ENDIF       = 24
 ENDINCASE   = 25
-RETURN      = 26
-PRINT       = 27
-INPUT       = 28
+ELSE        = 26
+ENDLOOP     = 27
+THEN        = 28
 OR          = 29
 AND         = 30
 NOT         = 31
+
+###########  SYMBOLS  ###########
 
 LEFTPARENTH = 32
 RIGHTPARENTH= 33
@@ -66,150 +71,191 @@ SEMICOL     = 46
 COMMA       = 47
 COLON       = 48
 ASSIGN      = 49
+LCOMMENT    = 50
+COMMENT     = 51
+ENDCOMMENT  = 52
+ENDDOWHILE  = 53
 
-ID          = 50
-NUMBER      = 51
-
+ID          = 54
+NUMBER      = 55
 
 
 
 
 class Token:
-    def __init__(self, mylist1, typ):
-        self.mylist1 = mylist1
-        self.typ = typ
+    def __init__(self, mylist1, typ, lin):
+        self.mylist1= mylist1
+        self.typ    = typ
+        self.lin    = lin
 
 token = ''
 
 def program():
+
     if token.typ == PROGR:
         lex()
-        if (token.typ == ID):
+        if token.typ == ID:
             lex()
             block()
-            lex()
-            if not(token.typ == ENDPROG):
+            if token.typ == ENDPROG:
+                print("****** Congratulations ******\nYour code has been compiled without errors. ")
+            else:
                 print('File: ', file_to_compile )
+                print ("ERROR near ", token.mylist1)
+                print ("line: ", token.lin - 1)
                 print ("ERROR: ' endprogram ' expected")
+                exit(0)
         else:
-            print("Error, 'ID' expected")
+            print('File: ', file_to_compile )
+            print ("ERROR near line", token.lin - 1)
+            print ("ERROR: ' ID ' expected")
+            exit(0)
     else:
         print('File: ', file_to_compile )
-        print ("ERROR: ' program ' expected")
+        print ("ERROR near line", token.lin)
+        print ("' program ' expected")
+        exit(0)
+
 
 
 def block():
-    declaration()
-    lex()
-    subprograms()
-    lex()
+    if token.typ == DECLAR:
+        declaration()
+    if token.typ == FUNC:
+        subprograms()
     statements()
-   
 
 def declaration():
     while token.typ == DECLAR:
         lex()
         varlist()
-        lex()
-        if (token.typ == SEMICOL):
+        if token.typ == SEMICOL:
             lex()
+        elif token.typ == ID:
+            print("ERROR near line", token.lin - 1)
+            print("ERROR: ' , ' expected")
+            exit(0)
         else:
             print('File: ', file_to_compile )
-            print ("ERROR: ' ; ' expected")
-    print()
+            print ("ERROR near line", token.lin - 1)
+            print ("ERROR: ' ; ' expected")  
+            exit(0)   
 
 def varlist():
     if token.typ == ID:
         lex()
         while token.typ == COMMA:
             lex()
-            if not(token.typ == ID):
+            if token.typ == ID:
+                lex()
+            else:
                 print('File: ', file_to_compile )
-                print ("ERROR: ' ID ' expected")
-            lex()
-    print()
-
+                print("ERROR near line", token.lin - 1)
+                print("ERROR: ' ID ' expected")
+                exit(0)
+    
 def subprograms():
     while token.typ == FUNC:
         subprogram()
-        lex()
-    print()
 
 def subprogram():
     if token.typ == FUNC:
         lex()
-        if (token.typ == ID):
+        if token.typ == ID:
             lex()
             funcbody()
-            lex()
-            if not(token.typ == ENDFUNC):
+            if token.typ == ENDFUNC:
+                lex()
+            else:
                 print('File: ', file_to_compile )
-                print ("ERROR: ' endfunction ' expected")
+                print ("ERROR near line", token.lin - 1)
+                exit(0)
         else:
             print('File: ', file_to_compile )
-            print ("ERROR: ' ID ' expected")
-
-    print()
+            print ("ERROR near line", token.lin - 1)
+            exit(0)
+        
 
 def funcbody():
     formalpars()
-    lex()
     block()
-    
 
 def formalpars():
     if token.typ == LEFTPARENTH:
-        formalparlist()
         lex()
-        if not(token.typ == RIGHTPARENTH):
+        formalparlist()
+        if token.typ == RIGHTPARENTH:
+            lex()
+        else:
             print('File: ', file_to_compile )
+            print ("ERROR near line", token.lin - 1)
             print ("ERROR: ' ) ' expected")
+            exit(0)
     else:
         print('File: ', file_to_compile )
+        print ("ERROR near line", token.lin - 1)
         print ("ERROR: ' (  ) ' expected")
-    
+        exit(0)
+
 
 def formalparlist():
     if token.typ == IN or token.typ == INOUT or token.typ == INANDOUT:
         formalparitem()
-        lex()
+        if token.typ == IN or token.typ == INOUT or token.typ == INANDOUT:
+            print('File: ', file_to_compile )
+            print ("ERROR near line", token.lin - 1)
+            print ("ERROR: ' , ' missing")
+            exit(0)
         while token.typ == COMMA:
             lex()
             formalparitem()
-            lex()
-    print()
 
 def formalparitem():
     if token.typ == IN:
         lex()
-        if not(token.typ == ID):
+        if token.typ == ID:
+            lex()
+        else:
             print('File: ', file_to_compile )
+            print ("ERROR near line", token.lin - 1)
             print ("ERROR: After in, ID expected")
+            exit(0)
     elif token.typ == INOUT:
         lex()
-        if not(token.typ == ID):
+        if token.typ == ID:
+            lex()
+        else:
             print('File: ', file_to_compile )
+            print ("ERROR near line", token.lin - 1)
             print ("ERROR: After inout, ID expected")
+            exit(0)
 
     elif token.typ == INANDOUT:
         lex()
         if not(token.typ == ID):
+            lex()
+        else:
             print('File: ', file_to_compile )
+            print ("ERROR near line", token.lin - 1)
             print ("ERROR: After inandout, ID expected")
+            exit(0)
     else:
         print('File: ', file_to_compile )
+        print ("ERROR near line", token.lin - 1)
         print ("ERROR: in/inout/inandout id expected")
-
-    print()
+        exit(0)
 
 def statements():
     statement()
-    lex()
+    if ((token.typ > 8 and token.typ < 19) or token.typ == ID ):
+        print('File: ', file_to_compile )
+        print ("ERROR near line", token.lin - 1)
+        print ("' ; ' expected ")
+        print ("<statements>::= <statement> (;<statement> )* ")
+        exit(0)
     while token.typ == SEMICOL:
         lex()
         statement()
-        lex()
-    
 
 def statement():
     if token.typ == ID:
@@ -218,7 +264,7 @@ def statement():
         ifStat()
     elif token.typ == WHILE:
         whileStat()
-    elif token.typ == DO:
+    elif token.typ == DOWHILE:
         doWhileStat()
     elif token.typ == LOOP:
         loopStat()
@@ -234,336 +280,400 @@ def statement():
         inputStat()
     elif token.typ == PRINT:
         printStat()
-
+    else:
+        print()
 
 def assignmentStat():
-    if (token.typ == ID):
+    if token.typ == ID:
         lex()
-        if (token.typ == ASSIGN):
+        if token.typ == ASSIGN:
             lex()
             expression()
         else:
-            print("Error, ':=' expected")
-
-    print()
+            print('File: ', file_to_compile)
+            print ("ERROR near line", token.lin - 1)
+            print(" ' := ' expected")
+            exit(0)
+    else:
+        print('File: ', file_to_compile)
+        print ("ERROR near line", token.lin - 1)
+        print(" ' ID ' expected")
+        exit(0)
 
 def ifStat():
-    if (token.typ == IF):
-        if (token.typ == LEFTPARENTH):
+    if token.typ == IF:
+        lex()
+        if token.typ == LEFTPARENTH:
             lex()
             condition()
-            lex()
-            if (token.typ == RIGHTPARENTH):
+            if token.typ == RIGHTPARENTH:
                 lex()
-                if (token.typ == THEN):
+                if token.typ == THEN:
                     lex()
                     statements()
-                    lex()
                     elsepart()
-                    lex()
-                    if not(token.typ == ENDIF):
-                        print("Error, 'endif' expected")
-                else: 
-                    print("Error, 'then' expected")
+                    if token.typ == ENDIF:
+                        lex()
+                    else:
+                        print('File: ', file_to_compile )
+                        print ("ERROR near line", token.lin - 1)
+                        print(" ' endif ' expected")
+                        print("if (<contition>) then <statements> <elsepart> endif")
+                        exit(0)
+                else:
+                    print('File: ', file_to_compile )
+                    print ("ERROR near line", token.lin - 1)
+                    print(" ' then ' expected")
+                    print("if (<contition>) then <statements> <elsepart> endif")
+                    exit(0)  
             else:
-                print("Error, ')' expected")
-
-
+                print('File: ', file_to_compile)
+                print ("ERROR near line", token.lin - 1)
+                print(" ' ) ' expected")
+                print("\nif (<contition>) then <statements> <elsepart> endif")
+                exit(0)  
         else:
-            print("Error, '(' expected")
-
-
-    print()
+            print('File: ', file_to_compile )
+            print ("ERROR near line", token.lin - 1)
+            print(" ' ( ' expected")
+            print("\nif (<contition>) \nthen <statements> \n<elsepart> \nendif")
+            exit(0)
 
 def elsepart():
-    if (token.typ == ELSE):
+    if token.typ == ELSE:
         lex()
         statements()
-    print()
 
 def whileStat():
-    if (token.typ == WHILE):
+    if token.typ == WHILE:
         lex()
-        if (token.typ == LEFTPARENTH):
+        if token.typ == LEFTPARENTH:
+            lex()
+            condition()
+            if token.typ == RIGHTPARENTH:
                 lex()
-                condition()
-                lex()
-                if (token.typ == RIGHTPARENTH):
+                statements()
+                if token.typ == ENDWHILE:
                     lex()
-                    statements()
-                    lex()
-                    if not (token.typ == ENDWHILE):
-                        print("Error, 'endwhile' expected")
                 else:
-                    print("Error, ')' expected")
+                    print('File: ', file_to_compile )
+                    print ("ERROR near line", token.lin - 1)
+                    print(" ' endwhile ' expected")
+                    exit(0)
+            else:
+                print('File: ', file_to_compile)
+                print ("ERROR near line", token.lin - 1)
+                print(" ' ) ' expected")  
+                exit(0)    
         else:
-            print("Error, '(' expected")        
+            print('File: ', file_to_compile )
+            print ("ERROR near line", token.lin - 1)
+            print(" ' ( ' expected")
+            exit(0)
+    else:
+        print('File: ', file_to_compile )
+        print ("ERROR near line", token.lin - 1)
+        print (" ' while ' expected")
+        exit(0)
 
-
-        
-
-    print()
 
 def doWhileStat():
-    if (token.typ == DO):
+    if token.typ == DOWHILE:
         lex()
         statements()
-        if (token.typ == WHILE):
+        if token.typ == ENDDOWHILE:
             lex()
-            if (token.typ == LEFTPARENTH):
+            if token.typ == LEFTPARENTH:
                 lex()
                 condition()
-                lex()
-                if not(token.typ == RIGHTPARENTH):
-                    print("Error, ')' expected")
+                if token.typ == RIGHTPARENTH:
+                    lex()
+                else:
+                    print('File: ', file_to_compile )
+                    print ("ERROR near line", token.lin - 1)
+                    print (" ' ) ' expected")
+                    exit(0)
             else:
-                print("Error, '(' expected")
+                print('File: ', file_to_compile )
+                print ("ERROR near line", token.lin - 1)
+                print (" ' ( ' expected")
+                exit(0)
         else:
-            print("Error, 'while' expected")
+            print('File: ', file_to_compile )
+            print ("ERROR near line", token.lin - 1)
+            print (" ' enddowhile ' expected")
+            exit(0)
+    else:
+        print('File: ', file_to_compile )
+        print ("ERROR near line", token.lin - 1)
+        print (" ' dowhile ' expected")
+        exit(0)
 
-    print()
 
 def loopStat():
-    if (token.typ == LOOP):
+    if token.typ == LOOP:
         lex()
         statements()
-        lex()
-        if not (token.typ == ENDLOOP):
-            print("Error, 'endloop' expected at line..")
-    print()
+        if token.typ == ENDLOOP:
+            lex()
+        else:
+            print('File: ', file_to_compile )
+            print ("ERROR near line", token.lin - 1)
+            print ("ERROR: ' endloop ' expected")
+            exit(0)
+    else:
+        print('File: ', file_to_compile )
+        print ("ERROR near line", token.lin - 1)
+        print ("ERROR: ' loop ' expected")
+        exit(0)
 
 def exitStat():
-    if not (token.typ == EXIT):
-        print("Error, 'exit' expected at line..")
-    print()
+    if token.typ == EXIT:
+        lex()
+    else:
+        print('File: ', file_to_compile )
+        print ("ERROR near line", token.lin - 1)
+        print ("ERROR: ' exit ' expected")
+        exit(0)
 
 def forcaseStat():
-    if (token.typ == FORCASE):
+    if token.typ == FORCASE:
         lex()
-        while (token.typ == WHEN):
+        while token.typ == WHEN:
             lex()
-            afterwhen()
+            afterWhen()
+        if token.typ == DEFAULT:
             lex()
-        if (token.typ == DEFAULT):
-            lex()
-            if (token.typ == COLON):
+            if token.typ == COLON:
                 lex()
                 statements()
-                lex()
-                if (token.typ == ENDDEFAULT):
+                if token.typ == ENDDEFAULT:
                     lex()
-                    if not(token.typ == ENDFORCASE):
-                        print("Error, 'endforcase' expected at line..")
+                    if token.typ == ENDFORCASE:
+                        lex()
+                    else:
+                        print('File: ', file_to_compile )
+                        print ("ERROR near line", token.lin - 1)
+                        print ("ERROR: ' endforcase ' expected")
+                        exit(0)
                 else:
-                     print("Error, enddefault expected at line..")
-                   
+                    print('File: ', file_to_compile )
+                    print ("ERROR near line", token.lin - 1)
+                    print ("ERROR: ' enddefault ' expected")   
+                    exit(0)
             else:
-                print("Error, ':' expected")
+                print('File: ', file_to_compile )
+                print ("ERROR near line", token.lin - 1)
+                print ("ERROR: ' : ' expected")
+                exit(0)
         else:
-            print("Error, 'default' expected")
-    print()
-def afterWhen():
+            print('File: ', file_to_compile )
+            print ("ERROR near line", token.lin - 1)
+            print ("ERROR: ' default ' expected")
+            exit(0)
 
-    if (token.typ == LEFTPARENTH):
+def afterWhen():
+    if token.typ == LEFTPARENTH:
         lex()
         condition()
-        lex()
-        if (token.type == RIGHTPARENTH):
+        if token.typ == RIGHTPARENTH:
             lex()
-            if (token.type == ':'):
+            if token.typ == COLON:
                 lex()
                 statements()
             else:
-                print("Error, ':' expected")
+                print('File: ', file_to_compile )
+                print ("ERROR near line", token.lin - 1)
+                print ("ERROR AFTER ' when ': ' : ' expected")
+                print (" when (<condition>) : <statements>")
         else:
-            print("Error, ')' expected")
-
+            print('File: ', file_to_compile )
+            print ("ERROR near line", token.lin - 1)
+            print ("ERROR AFTER ' when ': ' ) ' expected")
+            print (" when (<condition>) : <statements>")
     else:
-        print("Error '(' expected")
-
+        print('File: ', file_to_compile )
+        print ("ERROR near line", token.lin - 1)
+        print ("ERROR AFTER ' when ': ' ( ' expected")
+        print (" when (<condition>) : <statements>")
 
 
 def incaseStat():
-    if (token.typ == INCASE):
+    if token.typ == INCASE:
         lex()
-        while ( token.typ == WHEN):
+        while token.typ == WHEN:
             lex()
-            afterwhen()
-            lex()
-        if not (token.typ == ENDINCASE):
-            print("Error, endincase expected at line..")
-
-    print()
-
-def returnStat():
-    if (token.typ == RETURN):
+            afterWhen()
+        if not(token.typ == ENDINCASE):
+            print('File: ', file_to_compile )
+            print ("ERROR near line", token.lin - 1)
+            print ("ERROR: ' endincase ' expected")
         lex()
-        expression()
-    print()
 
-def printStat():
-    if (token.typ == PRINT):
-        lex()
-        expression()
-    
+def returnStat():	# called
+    lex()   		# if token == return
+    expression()
+
+def printStat():	# called
+    lex()       	# if token == print
+    expression()
 
 def inputStat():
-    if (token.typ == INPUT):
+    if token.typ == INPUT:
         lex()
-        if not (token.typ == ID):
-            print("Error, ID expected at line..")
+        if not(token.typ == ID):
+            print('File: ', file_to_compile )
+            print ("ERROR near line", token.lin - 1)
+            print ("ERROR: ID expected")
+        lex()
     else:
-        print("Error, input expected at line..")
+        print('File: ', file_to_compile )
+        print ("ERROR near line", token.lin - 1)
+        print ("ERROR: input expected")
 
-    print()
 
 def actualpars():
-    if (token.typ == LEFTPARENTH):
-        lex()
-        actualparlist()
-        lex()
-        if not (token.typ == RIGHTPARENTH):
-            print("Error, Right Parenthesis expexted at line..")
-    else:
-        print("Error Left Parenthesis expected")
-    print()
+    lex()           # mpainei an exei (
+    actualparlist()
+    if not(token.typ == RIGHTPARENTH):
+        print ("ERROR near line", token.lin - 1)
+        print ("ERROR ) expected")
+    lex()
+
 
 def actualparlist():
-    if (token.typ == IN or token.typ == INOUT or token.typ == INANDOUT):
-        lex()
+    if token.typ == IN or token.typ == INOUT or token.typ == INANDOUT:
         actualparitem()
-        lex()
-        while (token.typ == COMMA):
+        while token.typ == COMMA:
             lex()
             actualparitem()
-            lex()
-
-    print()
-
+    else:
+        lex()
 
 def actualparitem():
-    if (token.typ == IN):
+    if token.typ == IN:
         lex()
         expression()
-    elif (token.typ == INOUT or token.typ == INANDOUT):
+    elif token.typ == INOUT:
         lex()
-        if not (token.typ == ID):
-            print("Error ID expected at line..")
-    else:
-        print("Error , in/inout/inandout expected")
+        if not(token.typ == ID):
+            print('File: ', file_to_compile )
+            print ("ERROR near line", token.lin - 1)
+            print ("ERROR: After inout, ID expected")
+        lex()
 
-    print()
+    elif token.typ == INANDOUT:
+        lex()
+        if not(token.typ == ID):
+            print('File: ', file_to_compile )
+            print ("ERROR near line", token.lin - 1)
+            print ("ERROR: After inandout, ID expected")
+        lex()
+    else:
+        print('File: ', file_to_compile )
+        print ("ERROR near line", token.lin - 1)
+        print ("ERROR: in/inout/inandout expected")
+
 
 def condition():
     boolterm()
-    lex()
-    while (token.typ == OR):
+    while token.typ == OR:
         lex()
         boolterm()
-        lex()
-    print()
+
 
 def boolterm():
     boolfactor()
-    lex()
-    while (token.typ == AND):
+    while token.typ == AND:
         lex()
         boolfactor()
-        lex()
-    print()
+
 
 def boolfactor():
-    if (token.typ == NOT):
+    if token.typ == NOT:
         lex()
-        if (token.typ == LEFTBRACK):
+        if token.typ == LEFTBRACK:
             lex()
             condition()
+            if not(token.typ == RIGHTBRACK):
+                print('File: ', file_to_compile )
+                print ("ERROR near line", token.lin - 1)
+                print ("ERROR: ] expected")
             lex()
-            if not (token.typ == RIGHTBRACK):
-                print("ERROR: Right Bracket expected at line..")
         else:
-            print("Error Left Bracket expected at line..")
-    elif (token.typ == LEFTBRACK):
-        lex()
-        condition()
-        lex()
-        if not (token.typ == RIGHTBRACK):
-            print("Error Right Bracket expected at line..")
+                print('File: ', file_to_compile )
+                print ("ERROR near line", token.lin - 1)
+                print ("ERROR: [ expected")
+    elif token.typ == LEFTBRACK:
+            lex()
+            condition()
+            if not(token.typ == RIGHTBRACK):
+                print('File: ', file_to_compile )
+                print ("ERROR near line", token.lin - 1)
+                print ("ERROR: ] expected")
+            lex()
     else:
         expression()
-        lex()
         relationOper()
-        lex()
         expression()
-    print()
-
+       
 def expression():
+
     optionalSign()
-    lex()
     term()
-    lex()
-    while(token.type == PLUS or token.typ == MINUS):
+
+    while (token.typ == PLUS) or (token.typ == MINUS):
         addOper()
-        lex()
         term()
-        lex()
-    print()
 
 def term():
     factor()
-    lex()
-    while (token.typ == TIMES or token.typ == DIV ):
+    while (token.typ == TIMES) or (token.typ == DIV):
         mulOper()
-        lex()
         factor()
-        lex()
-
-    print()
 
 def factor():
-    
-    if (token.typ == LEFTPARENTH):
+
+    if token.typ == LEFTPARENTH:
         lex()
         expression()
-        lex()
-        if not (token.typ == RIGHTPARENTH):
-            print("ERROR: Right Parenthesis expected at line..")
-    elif (token.typ == ID ):
+        if not(token.typ == RIGHTPARENTH):
+            print('File: ', file_to_compile )
+            print ("ERROR near line", token.lin - 1)
+            print ("ERROR: ) expected") 
+            exit(0) 
+        lex()   
+    elif token.typ == ID:
         lex()
         idtail()
-
-
-    print()
+    elif token.typ == NUMBER:
+        lex()
+    else:
+        print ("ERROR near line", token.lin - 1)
+        print("ERROR (factor):  expected")
+        exit(0)
 
 def idtail():
-    
-    if (token.typ == LEFTPARENTH):
-        actualpars() 
-    print()
+    if token.typ == LEFTPARENTH:
+        actualpars()
 
 def relationOper():
-    if not(token.typ == EQUALS or token.typ == LESSEQ or token.typ == BIGEQ or token.typ == BIGGER or token.typ == LESS or token.typ == DIFF):
-        print("ERROR: relation operator expected on line ..")
-    print()
+    if not((token.typ == EQUALS) or (token.typ == LESSEQ) or (token.typ == BIGEQ) or (token.typ == BIGGER) or (token.typ == LESS) or (token.typ == DIFF)):
+        print('File: ', file_to_compile )
+        print ("ERROR near line", token.lin - 1)
+        print("ERROR: <relational oper> expected")
+        exit(0)
+    lex()
 
-def addOper():
-    if not (token.typ == MINUS or token.typ == PLUS):
-        print("ERROR: (+) or (-) expected on line..")
-    print()
+def addOper():		# called if token + or -
+    lex()
 
-def mulOper():
-    if not (token.typ == TIMES or token.typ == DIV):
-
-        #line =  file.read().split('\n')[line_number]
-        print("ERROR: (*) or (/) expected on line.. ")
-
-    print()
+def mulOper():		# called if token * or /
+    lex()
 
 def optionalSign():
-    if (token.typ == MINUS or token.typ == PLUS):
+    if  (token.typ == PLUS) or (token.typ == MINUS):
         addOper()
-    print()
-
 
 
 def setWordType(mylist):
@@ -572,10 +682,8 @@ def setWordType(mylist):
         return NUMBER
 
     if (mylist.isalpha()):
-        
         if mylist == 'program':
             return PROGR
-
         elif mylist == 'endprogram':
             return ENDPROG
         elif mylist == 'declare':
@@ -602,8 +710,10 @@ def setWordType(mylist):
             return WHILE
         elif mylist == 'endwhile':
             return ENDWHILE
-        elif mylist == 'do':
-            return DO
+        elif mylist == 'dowhile':
+            return DOWHILE
+        elif mylist == 'enddowhile':
+            return ENDDOWHILE
         elif mylist == 'loop':
             return LOOP
         elif mylist == 'endloop':
@@ -673,11 +783,16 @@ def setWordType(mylist):
         return COLON
     elif mylist == ':=':
         return ASSIGN
+    elif mylist == ',':
+        return COMMA
+    elif mylist == '//':
+        return LCOMMENT
+    elif mylist == '/*':
+        return COMMENT
+    elif mylist == '*/':
+        return ENDCOMMENT
     else:
         return ID
-def globalchange(firsttime):
-    firsttime[0] = 1
-
 
 ########################################################
 #                                                      #
@@ -688,32 +803,37 @@ def globalchange(firsttime):
 
 def lex():
 
-    
     my_list = []
     state   = 0
     recog   = -1
     error   = -2
     goback  = 0
-    endfile = 0
-    
-    if firsttime[0] == 0:
 
-        if len(sys.argv) != 2:
-            print ("Wtf with the arguments")
-            exit(0)
-        global file_to_compile
-        global file
+    if len(sys.argv) != 2:
+        print ("I need a file to compile")
+        exit(0)
+
+    global endfile
+    global file_to_compile
+    global file
+    global firsttime
+    global line
+    
+    if firsttime==0:        # open file ones
         file_to_compile = sys.argv[1]
         file = open(file_to_compile, 'r')
-        print("firsttime here")
-        globalchange(firsttime)
-        
+        firsttime = 1
+
     while (state!=recog) and (state!=error):
 
-        symbol = file.read(1)
+        symbol = file.read(1)   # read one char per loop
+
+        if symbol == '\n':      # count .stl's lines 
+            line = line + 1
+
         my_list.append(symbol)
 
-        if state == 0:
+        if state == 0:         # arxiki 
             if symbol.isalpha():
                 state = 1
             elif symbol.isdigit():
@@ -724,72 +844,92 @@ def lex():
                 state = 4
             elif symbol == ':':
                 state = 5
-            elif symbol in ('+', '-', '*', '/', '=', ',', ';', '(', ')', '[', ']'):
+            elif symbol in ('+', '-', '=', '*', ',', ';', '(', ')', '[', ']'):
                 state = recog
+            elif symbol == '/':
+                state = 6
             elif symbol == '':   # EOF
                 endfile = 1
                 state = recog
             elif symbol.isspace():
                 del my_list[-1]
-                print("Im here in space")
             else:
                 state = error
-        elif state == 1:
+                print("ERROR: Invalid symbol near line: ", line)
+                exit(0)
+        elif state == 1:    # ID
             if not((symbol.isalpha()) or (symbol.isdigit())):   # word
                 state = recog
                 goback = 1
-                #na paei pisw
-        elif state == 2:
-            if (symbol.isspace()): #number
-                state= recog
+                # na paei pisw
+        elif state == 2:    # number
+            if not (symbol.isdigit()):  # number
+                state = recog
                 goback = 1
-            elif not (symbol.isdigit()):  # wrong number
-                state = error
-                print("ERROR !!")
-                #state = recog
-                #goback = 1;
-                #back
-        elif state == 3:
+                # back
+        elif state == 3:    # <= , <> , <
             if not(symbol in ('=', '>')):
                 print ("back")
                 goback = 1
                 #back
             state = recog
-        elif state == 4:
+        elif state == 4:    # >= , >
             if not(symbol == '='):
-                print ("back")
                 goback = 1;
                 #back
             state = recog
-        elif state == 5:
-            if not (symbol == '='):
+        elif state == 5:    # := , :
+            if not(symbol == '='):
                 goback = 1
+                #back
             state = recog
-            
+        elif state == 6:    # // , /* , /
+            if symbol == '/' :
+                state = 7
+            elif symbol == '*':
+                state = 8
+            else:
+                state = recog
+                goback = 1
+        elif state == 7:    # one line comment //
+            if symbol == '\n':
+                state = 0
+                my_list = []
+        elif state == 8:    # comments /*
+            if symbol == '*':
+                state = 9 
+            elif symbol == '':	# EOF 
+            	print("ERROR in comments: ' */ ' missing")
+            	exit(0)        
+        elif state == 9:    # end comments */
+            if symbol == '/':
+                state = 0
+                my_list = []
+            else:
+                state = 8
 
-    if goback:
-    
+    if goback:          # delete last char from my_list
+        del my_list[-1]
         if not(endfile):
             file.seek(file.tell() - 1)
-            del my_list[-1]
+
+    my_list = ''.join(my_list)  # enwnoume tous xaraktires
+                                # se ena string
+
+    if my_list.isdigit():   # if number check if 0 to 32767
+        if (int(my_list) > 32767):
+            print("ERROR: Invalid number near line: ", line - 1)
+            print("Acceptable numbers: 0 to 32767")
+            exit(0)
 
 
-    my_list = ''.join(my_list)
-    print(my_list)
-    print(len(my_list))
-    typ = setWordType(my_list)
+    typ = setWordType(my_list)  # set token types
     if state == recog:
         global token
-        token = Token(my_list, typ)
-       # PROBLEM ECOUME ENTO
-    print(token.typ) 
+        token = Token(my_list, typ, line)
 
-
-    print ("Number of arg:", len(sys.argv), "arguments")
-    print ("Argument List:", str(sys.argv))
-
+    print(token.mylist1, token.typ)
+ 
 
 lex()
-#mulOper()
-#while (state!=error and )
 program()
