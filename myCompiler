@@ -820,6 +820,7 @@ def lex():
     recog   = -1
     error   = -2
     goback  = 0
+    
 
     if len(sys.argv) != 2:  #The arguments need to consist of this file (MyCompiler.py) and a file to compile.
         print ("I need a file to compile")
@@ -830,6 +831,8 @@ def lex():
     global file
     global firsttime
     global line
+    global charcounter
+    charcounter = 0
     
     if firsttime==0:        #The file needs to open once. This variable changes value only once, so as the file.
         file_to_compile = sys.argv[1]
@@ -849,6 +852,7 @@ def lex():
 
         if state == 0:         # First state of the finite automaton.
             if symbol.isalpha():
+                charcounter = charcounter + 1
                 state = 1
             elif symbol.isdigit():
                 state = 2
@@ -873,9 +877,13 @@ def lex():
                 exit(0)
         elif state == 1:    # ID
             if not((symbol.isalpha()) or (symbol.isdigit())):   # word
+                if len(my_list) > 31:
+                    my_list = my_list[:31]
                 state = recog
                 goback = 1
                 # na paei pisw
+            if(symbol.isalpha()):
+                charcounter = charcounter + 1
         elif state == 2:    # number
             if not (symbol.isdigit()):  # number
                 state = recog
