@@ -39,7 +39,9 @@ program test1 //This is a test
 		declare s,u;
 
 		function f3(i s)
-			//if(s+2<=8-3) 
+			if(s+2<=8-3) then
+				exit
+			endif
 
 		endfunction
 
