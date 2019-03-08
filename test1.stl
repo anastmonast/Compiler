@@ -1,21 +1,51 @@
-program test1
+program test1 //This is a test
+
 	declare a,b,c,d;
-	function t(in b, inout c)
+
+	function f1(in b, inout c)
+
 		declare e;
+
 			if ( not [a<b or a=9] and [a<9] ) then
 				forcase
 					when (a>9) :
-						default: 
+						while ([d=c or a=2])
+							b:=a+1;
+							c:=b-1;
+							print (d+d)+(a/3);
+							input e
+
+
+						endwhile
+					when(b>=4): /* -Comments are cool!
+									-Agreed. */
+						
+						default:    
 							incase
 								endincase
 						enddefault
 				endforcase
 			else
 				loop 
+					a := (a/3)*b+1-c;
 					return 3*(3/b) + (2*4)
 				endloop
 			endif
+
+
 	endfunction
+
+	function f2(inandout g)
+		declare s,u;
+
+		function f3(i s)
+			//if(s+2<=8-3) 
+
+		endfunction
+
+
+	endfunction
+
 
 endprogram			
 
