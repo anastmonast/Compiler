@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 
-# Despoina Kotsidou       am:2475	cse32475
-# Anastasia Monastiridou  am:2488	cse32488
+# Despoina Kotsidou     
+# Anastasia Monastiridou  
 
 import sys
 file_to_compile = ' '
