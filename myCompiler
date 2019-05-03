@@ -79,51 +79,60 @@ class Token: #Class for defining token, type of "word" found from lex  and used 
         self.mylist1= mylist1  #list of the current word being in process when lex is done 
         self.typ    = typ #the "type" of word found from lex
         self.lin    = lin #current line of file being compiled 
-
 class Quad:
-	def __init__(self, label, op, a, b, z):
-		self.label = label
-		self.op = op
-		self.a 	= a
-		self.b 	= b
-		self.z	= z
+    def __init__(self, label, op, a, b, z):
+        self.label = label
+        self.op = op
+        self.a  = a
+        self.b  = b
+        self.z  = z
 
-token = '' #we will keep the token's value here
-quadList = []
-temps = 0
+token       = '' #we will keep the token's value here
+quadList    = []
+temps       = 0
 nextQ = 0
+program_name = ''
 
 def nextQuad():
     return nextQ
 
 def genQuad(op, x, y, z):
-	global nextQ
-	#to DO
-	newQuad = Quad(nextQ, op, x, y, z)
-	quadList.append(newQuad)
-	nextQ += 1
+    global nextQ
+    newQuad = Quad(nextQ, op, x, y, z)
+    quadList.append(newQuad)
+    nextQ += 1
 
 def newTemp():
-	#to DO
-	return 0
+    global temps
+    newTemp = 'T_' + str(temps)
+    temps += 1
+    #to DO
+    return newTemp
 
 def emptylist():
-	return list()
+    return list()
 
 def makelist(x):
-	newlist = list()
-	newlist.append(x) 
-	return newlist
+    newlist = list()
+    newlist.append(x) 
+    return newlist
 
 def merge (list1, list2):
-	reutrn (list1+ list2)
+    reutrn (list1+ list2)
 
-def backpatch(list, z):
-	#to DO
-	return 0
+def backpatch(listToFill, z):
+    global quadList
+    for quad in listToFill:
+        quadList[quad.label].z = z
+    #to DO mallon exei lathos. oxi mallon, exei mouaha
 
 def printWHAT():
-	print(quadList[0].op)
+    print(quadList[0].op)
+
+def writeToFile():
+    global quadList
+    for i in quadList:
+        print(i.op +' '+  i.a +' '+ i.b +' '+ i.z)
 
 ########################################################
 #                                                      #
@@ -137,12 +146,15 @@ def printWHAT():
 def program(): #The begining of the syntax analyser.
 
     if token.typ == PROGR:
-        genQuad('begin_block', token.mylist1, "_", "_")
         lex()
+        program_name = token.mylist1
+        genQuad('begin_block', program_name, "_", "_")
         if token.typ == ID:
             lex()
             block()
             if token.typ == ENDPROG:
+                genQuad('end_program', program_name, "_", "_")
+                writeToFile()
                 print("****** Congratulations ******\nYour code has been compiled without errors. ")
             else:
                 print('File: ', file_to_compile )
