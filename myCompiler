@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 
-# Despoina Kotsidou       2475
-# Anastasia Monastiridou  2488
+# Despoina Kotsidou       am:2475	cse32475
+# Anastasia Monastiridou  am:2488	cse32488
 
 import sys
 file_to_compile = ' '
@@ -24,7 +24,6 @@ INOUT       = 7
 INANDOUT    = 8
 
 ###        STATEMENTS         ###
-
 IF          = 9
 WHILE       = 10
 DOWHILE     = 11
@@ -52,7 +51,6 @@ AND         = 30
 NOT         = 31
 
 ###########  SYMBOLS  ###########
-
 LEFTPARENTH = 32
 RIGHTPARENTH= 33
 LEFTBRACK   = 34
@@ -71,16 +69,10 @@ SEMICOL     = 46
 COMMA       = 47
 COLON       = 48
 ASSIGN      = 49
-LCOMMENT    = 50
-COMMENT     = 51
-ENDCOMMENT  = 52
-ENDDOWHILE  = 53
+ENDDOWHILE  = 50
 
-ID          = 54
-NUMBER      = 55
-
-
-
+ID          = 51
+NUMBER      = 52
 
 class Token: #Class for defining token, type of "word" found from lex  and used from the syntax analyser
     def __init__(self, mylist1, typ, lin):  
@@ -88,7 +80,50 @@ class Token: #Class for defining token, type of "word" found from lex  and used 
         self.typ    = typ #the "type" of word found from lex
         self.lin    = lin #current line of file being compiled 
 
+class Quad:
+	def __init__(self, label, op, a, b, z):
+		self.label = label
+		self.op = op
+		self.a 	= a
+		self.b 	= b
+		self.z	= z
+
 token = '' #we will keep the token's value here
+quadList = []
+temps = 0
+nextQ = 0
+
+def nextQuad():
+    return nextQ
+
+def genQuad(op, x, y, z):
+	global nextQ
+	#to DO
+	newQuad = Quad(nextQ, op, x, y, z)
+	quadList.append(newQuad)
+	nextQ += 1
+
+def newTemp():
+	#to DO
+	return 0
+
+def emptylist():
+	return list()
+
+def makelist(x):
+	newlist = list()
+	newlist.append(x) 
+	return newlist
+
+def merge (list1, list2):
+	reutrn (list1+ list2)
+
+def backpatch(list, z):
+	#to DO
+	return 0
+
+def printWHAT():
+	print(quadList[0].op)
 
 ########################################################
 #                                                      #
@@ -97,13 +132,12 @@ token = '' #we will keep the token's value here
 ########################################################
 
 #Implementation of the grammatical model of the language "Starlet".
-
 #The program exits if a syntax error has been found, showing the user the type of error and the line of error occurance.
-
 
 def program(): #The begining of the syntax analyser.
 
     if token.typ == PROGR:
+        genQuad('begin_block', token.mylist1, "_", "_")
         lex()
         if token.typ == ID:
             lex()
@@ -126,8 +160,6 @@ def program(): #The begining of the syntax analyser.
         print ("ERROR near line", token.lin)
         print ("' program ' expected")
         exit(0)
-
-
 
 def block():
     if token.typ == DECLAR:
@@ -177,13 +209,19 @@ def subprogram():
             funcbody()
             if token.typ == ENDFUNC:
                 lex()
+            elif token.typ>1 and token.typ<50:
+                print ("ERROR near line", token.lin - 1)
+                print("Syntax error")
+                exit(0)
             else:
                 print('File: ', file_to_compile )
                 print ("ERROR near line", token.lin - 1)
+                print("' endfunction ' missing")
                 exit(0)
         else:
             print('File: ', file_to_compile )
             print ("ERROR near line", token.lin - 1)
+            print("' function's ID ' missing ")
             exit(0)
         
 
@@ -200,7 +238,7 @@ def formalpars():
         else:
             print('File: ', file_to_compile )
             print ("ERROR near line", token.lin - 1)
-            print ("ERROR: ' ) ' expected")
+            print ("ERROR: ' in/inout/inandout id ' expected")
             exit(0)
     else:
         print('File: ', file_to_compile )
@@ -220,6 +258,11 @@ def formalparlist():
         while token.typ == COMMA:
             lex()
             formalparitem()
+    elif not(token.typ == RIGHTPARENTH):
+        print('File: ', file_to_compile )
+        print ("ERROR near line", token.lin - 1)
+        print ("ERROR: ' in/inout/inandout ' expected")
+        exit(0)
 
 def formalparitem():
     if token.typ == IN:
@@ -243,7 +286,7 @@ def formalparitem():
 
     elif token.typ == INANDOUT:
         lex()
-        if not(token.typ == ID):
+        if token.typ == ID:
             lex()
         else:
             print('File: ', file_to_compile )
@@ -497,17 +540,19 @@ def afterWhen(): #Function-helper for what follows the "reserved" word "when".
                 print ("ERROR near line", token.lin - 1)
                 print ("ERROR AFTER ' when ': ' : ' expected")
                 print (" when (<condition>) : <statements>")
+                exit(0)
         else:
             print('File: ', file_to_compile )
             print ("ERROR near line", token.lin - 1)
             print ("ERROR AFTER ' when ': ' ) ' expected")
             print (" when (<condition>) : <statements>")
+            exit(0)
     else:
         print('File: ', file_to_compile )
         print ("ERROR near line", token.lin - 1)
         print ("ERROR AFTER ' when ': ' ( ' expected")
         print (" when (<condition>) : <statements>")
-
+        exit(0)
 
 def incaseStat():
     if token.typ == INCASE:
@@ -515,11 +560,13 @@ def incaseStat():
         while token.typ == WHEN:
             lex()
             afterWhen()
-        if not(token.typ == ENDINCASE):
+        if token.typ == ENDINCASE:
+        	lex()
+       	else:
             print('File: ', file_to_compile )
             print ("ERROR near line", token.lin - 1)
             print ("ERROR: ' endincase ' expected")
-        lex()
+            exit(0)
 
 def returnStat():   # called
     lex()           # if token == return
@@ -532,25 +579,28 @@ def printStat():    # called
 def inputStat():
     if token.typ == INPUT:
         lex()
-        if not(token.typ == ID):
+        if token.typ == ID:
+        	lex()
+        else:
             print('File: ', file_to_compile )
             print ("ERROR near line", token.lin - 1)
             print ("ERROR: ID expected")
-        lex()
+            exit(0)
     else:
         print('File: ', file_to_compile )
         print ("ERROR near line", token.lin - 1)
         print ("ERROR: input expected")
-
+        exit(0)
 
 def actualpars():
     lex()           # mpainei an exei (
     actualparlist()
-    if not(token.typ == RIGHTPARENTH):
+    if token.typ == RIGHTPARENTH:
+    	lex()
+    else:
         print ("ERROR near line", token.lin - 1)
         print ("ERROR ) expected")
-    lex()
-
+        exit(0)
 
 def actualparlist():
     if token.typ == IN or token.typ == INOUT or token.typ == INANDOUT:
@@ -558,8 +608,6 @@ def actualparlist():
         while token.typ == COMMA:
             lex()
             actualparitem()
-    else:
-        lex()
 
 def actualparitem():
     if token.typ == IN:
@@ -567,24 +615,28 @@ def actualparitem():
         expression()
     elif token.typ == INOUT:
         lex()
-        if not(token.typ == ID):
+        if token.typ == ID:
+        	lex()
+        else:
             print('File: ', file_to_compile )
             print ("ERROR near line", token.lin - 1)
             print ("ERROR: After inout, ID expected")
-        lex()
-
+            exit(0)
+       
     elif token.typ == INANDOUT:
         lex()
-        if not(token.typ == ID):
+        if token.typ == ID:
+        	lex()
+        else:
             print('File: ', file_to_compile )
             print ("ERROR near line", token.lin - 1)
             print ("ERROR: After inandout, ID expected")
-        lex()
+            exit(0)
     else:
         print('File: ', file_to_compile )
         print ("ERROR near line", token.lin - 1)
         print ("ERROR: in/inout/inandout expected")
-
+        exit(0)
 
 def condition():
     boolterm()
@@ -606,15 +658,18 @@ def boolfactor():
         if token.typ == LEFTBRACK:
             lex()
             condition()
-            if not(token.typ == RIGHTBRACK):
+            if token.typ == RIGHTBRACK:
+            	lex()
+            else:
                 print('File: ', file_to_compile )
                 print ("ERROR near line", token.lin - 1)
                 print ("ERROR: ] expected")
-            lex()
+                exit(0)   
         else:
-                print('File: ', file_to_compile )
-                print ("ERROR near line", token.lin - 1)
-                print ("ERROR: [ expected")
+            print('File: ', file_to_compile )
+            print ("ERROR near line", token.lin - 1)
+            print ("ERROR: [ expected")
+            exit(0)
     elif token.typ == LEFTBRACK:
             lex()
             condition()
@@ -622,6 +677,7 @@ def boolfactor():
                 print('File: ', file_to_compile )
                 print ("ERROR near line", token.lin - 1)
                 print ("ERROR: ] expected")
+                exit(0)
             lex()
     else:
         expression()
@@ -797,21 +853,14 @@ def setWordType(mylist):
         return ASSIGN
     elif mylist == ',':
         return COMMA
-    elif mylist == '//':
-        return LCOMMENT
-    elif mylist == '/*':
-        return COMMENT
-    elif mylist == '*/':
-        return ENDCOMMENT
     else:
         return ID
 
 ########################################################
 #                                                      #
-#                 LEXICAL ANALYSER                    #
+#                 LEXICAL ANALYSER                     #
 #                                                      #                
 ########################################################
-
 
 def lex():
 
@@ -820,7 +869,6 @@ def lex():
     recog   = -1
     error   = -2
     goback  = 0
-    
 
     if len(sys.argv) != 2:  #The arguments need to consist of this file (MyCompiler.py) and a file to compile.
         print ("I need a file to compile")
@@ -831,11 +879,9 @@ def lex():
     global file
     global firsttime
     global line
-    global charcounter
-    charcounter = 0
     
-    if firsttime==0:        #The file needs to open once. This variable changes value only once, so as the file.
-        file_to_compile = sys.argv[1]
+    if firsttime==0:        	#The file needs to be opened once. 
+        file_to_compile = sys.argv[1]	#This variable changes value only once, so as the file.
         file = open(file_to_compile, 'r')
         firsttime = 1
 
@@ -852,7 +898,6 @@ def lex():
 
         if state == 0:         # First state of the finite automaton.
             if symbol.isalpha():
-                charcounter = charcounter + 1
                 state = 1
             elif symbol.isdigit():
                 state = 2
@@ -877,28 +922,21 @@ def lex():
                 exit(0)
         elif state == 1:    # ID
             if not((symbol.isalpha()) or (symbol.isdigit())):   # word
-                if len(my_list) > 31:
+                if len(my_list) > 30:
                     my_list = my_list[:31]
                 state = recog
-                goback = 1
-                # na paei pisw
-            if(symbol.isalpha()):
-                charcounter = charcounter + 1
+                goback = 1	# seek back
         elif state == 2:    # number
-            if not (symbol.isdigit()):  # number
+            if not (symbol.isdigit()):
                 state = recog
-                goback = 1
-                # back
+                goback = 1	# seek back
         elif state == 3:    # <= , <> , <
             if not(symbol in ('=', '>')):
-                print ("back")
-                goback = 1
-                #back
+                goback = 1	# seek back
             state = recog
         elif state == 4:    # >= , >
             if not(symbol == '='):
-                goback = 1;
-                #back
+                goback = 1;	# seek back
             state = recog
         elif state == 5:    # := , :
             if not(symbol == '='):
@@ -937,20 +975,16 @@ def lex():
 
     my_list = ''.join(my_list)  #Joining all the chars into the list.
                                 
-
     if my_list.isdigit():   #In case a number was found, check if it's acceptable. Acceptable numbers : lesser than 32767.
         if (int(my_list) > 32767):
             print("ERROR: Invalid number near line: ", line - 1)
             print("Acceptable numbers: 0 to 32767")
             exit(0)
 
-
     typ = setWordType(my_list)  # Set the type of word found (now known as token), which is held in the list.
     if state == recog: # Set all token parameters only if the automaton has reached it's finite state (a word has been found).
         global token
         token = Token(my_list, typ, line)
-
-    print(token.mylist1, token.typ)
  
 
 lex()     #Call the lexical analyser to jumpstart the process. After the first word has been found,
