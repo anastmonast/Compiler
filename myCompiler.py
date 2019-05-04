@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 
-# Despoina Kotsidou     
-# Anastasia Monastiridou  
+# Despoina Kotsidou       am:2475	cse32475
+# Anastasia Monastiridou  am:2488	cse32488
 
 import sys
 file_to_compile = ' '
@@ -79,8 +79,60 @@ class Token: #Class for defining token, type of "word" found from lex  and used 
         self.mylist1= mylist1  #list of the current word being in process when lex is done 
         self.typ    = typ #the "type" of word found from lex
         self.lin    = lin #current line of file being compiled 
+class Quad:
+    def __init__(self, label, op, a, b, z):
+        self.label = label
+        self.op = op
+        self.a  = a
+        self.b  = b
+        self.z  = z
 
-token = '' #we will keep the token's value here
+token       = '' #we will keep the token's value here
+quadList    = []
+temps       = 0
+nextQ = 0
+program_name = ''
+
+def nextQuad():
+    return nextQ
+
+def genQuad(op, x, y, z):
+    global nextQ
+    print (nextQ)
+    newQuad = Quad(nextQ, op, x, y, z)
+    quadList.append(newQuad)
+    nextQ += 1
+
+def newTemp():
+    global temps
+    newTemp = 'T_' + str(temps)
+    temps += 1
+    #to DO
+    return newTemp
+
+def emptylist():
+    return list()
+
+def makelist(x):
+    newlist = list()
+    newlist.append(x) 
+    return newlist
+
+def merge (list1, list2):
+    return (list1+ list2)
+
+def backpatch(listToFill, z):
+    global quadList
+    for quad in listToFill:
+        quadList[quad].z = z
+
+def printWHAT():
+    print(quadList[0].op)
+
+def writeToFile():
+    global quadList
+    for i in quadList:
+      print(str(i.label) + ' ' + str(i.op) + ' ' +  str(i.a) + ' ' + str(i.b) + ' ' + str(i.z))
 
 ########################################################
 #                                                      #
@@ -92,13 +144,16 @@ token = '' #we will keep the token's value here
 #The program exits if a syntax error has been found, showing the user the type of error and the line of error occurance.
 
 def program(): #The begining of the syntax analyser.
-
     if token.typ == PROGR:
         lex()
+        program_name = token.mylist1
+        genQuad('begin_block', program_name, "_", "_")
         if token.typ == ID:
             lex()
             block()
             if token.typ == ENDPROG:
+                genQuad('end_program', program_name, "_", "_")
+                writeToFile()
                 print("****** Congratulations ******\nYour code has been compiled without errors. ")
             else:
                 print('File: ', file_to_compile )
@@ -239,7 +294,6 @@ def formalparitem():
             print ("ERROR near line", token.lin - 1)
             print ("ERROR: After inout, ID expected")
             exit(0)
-
     elif token.typ == INANDOUT:
         lex()
         if token.typ == ID:
@@ -295,10 +349,12 @@ def statement():
 
 def assignmentStat():
     if token.typ == ID:
+        parid = token.mylist1
         lex()
         if token.typ == ASSIGN:
             lex()
-            expression()
+            exp = expression()
+            genQuad(':=', exp, '_', parid)
         else:
             print('File: ', file_to_compile)
             print ("ERROR near line", token.lin - 1)
@@ -309,19 +365,25 @@ def assignmentStat():
         print ("ERROR near line", token.lin - 1)
         print(" ' ID ' expected")
         exit(0)
+    return exp
 
 def ifStat():
     if token.typ == IF:
         lex()
         if token.typ == LEFTPARENTH:
             lex()
-            condition()
+            (Btrue, Bfalse) = condition()
             if token.typ == RIGHTPARENTH:
                 lex()
                 if token.typ == THEN:
+                    backpatch(Btrue, nextQuad())
                     lex()
                     statements()
+                    ifList = makelist(nextQuad())
+                    genQuad('jump', '_', '_', '_')
+                    backpatch(Bfalse, nextQuad())
                     elsepart()
+                    backpatch(ifList, nextQuad())
                     if token.typ == ENDIF:
                         lex()
                     else:
@@ -357,12 +419,16 @@ def elsepart():
 def whileStat():
     if token.typ == WHILE:
         lex()
+        Bquad = nextQuad()
         if token.typ == LEFTPARENTH:
             lex()
-            condition()
+            (Btrue, Bfalse) = condition()
             if token.typ == RIGHTPARENTH:
                 lex()
+                backpatch(Btrue, nextQuad())
                 statements()
+                genQuad('jump', '_', '_', Bquad)
+                backpatch(Bfalse, nextQuad())
                 if token.typ == ENDWHILE:
                     lex()
                 else:
@@ -386,16 +452,18 @@ def whileStat():
         print (" ' while ' expected")
         exit(0)
 
-
 def doWhileStat():
     if token.typ == DOWHILE:
         lex()
+        Bquad = nextQuad()
         statements()
         if token.typ == ENDDOWHILE:
             lex()
             if token.typ == LEFTPARENTH:
                 lex()
-                condition()
+                (Ctrue, Cfalse) = condition()
+                backpatch(Cfalse, Bquad)
+                backpatch(Ctrue, nextQuad())
                 if token.typ == RIGHTPARENTH:
                     lex()
                 else:
@@ -440,6 +508,7 @@ def loopStat():
 def exitStat():
     if token.typ == EXIT:
         lex()
+        genQuad('jump', '_', '_', '_')
     else:
         print('File: ', file_to_compile )
         print ("ERROR near line", token.lin - 1)
@@ -449,17 +518,54 @@ def exitStat():
 def forcaseStat():
     if token.typ == FORCASE:
         lex()
+        temp = newTemp()
+        exitList = emptylist()
+        flagquad = nextQuad()
+        genQuad(':=', '0', '_', temp)
         while token.typ == WHEN:
             lex()
-            afterWhen()
+            if token.typ == LEFTPARENTH:
+                lex()
+                (Ctrue, Cfalse) = condition()
+                if token.typ == RIGHTPARENTH:
+                    lex()
+                    if token.typ == COLON:
+                        lex()
+                        backpatch(Ctrue, nextQuad())
+                        genQuad(':=', '1', '_', temp)
+                        statements()
+                        tmp = makelist(nextQuad())
+                        genQuad('jump', '_', '_', '_')
+                        exitList = merge(exitList, tmp)
+                        backpatch(Cfalse, nextQuad())
+                    else:
+                        print('File: ', file_to_compile )
+                        print ("ERROR near line", token.lin - 1)
+                        print ("ERROR AFTER ' when ': ' : ' expected")
+                        print (" when (<condition>) : <statements>")
+                        exit(0)
+                else:
+                    print('File: ', file_to_compile )
+                    print ("ERROR near line", token.lin - 1)
+                    print ("ERROR AFTER ' when ': ' ) ' expected")
+                    print (" when (<condition>) : <statements>")
+                    exit(0)
+            else:
+                print('File: ', file_to_compile )
+                print ("ERROR near line", token.lin - 1)
+                print ("ERROR AFTER ' when ': ' ( ' expected")
+                print (" when (<condition>) : <statements>")
+                exit(0)
         if token.typ == DEFAULT:
             lex()
             if token.typ == COLON:
                 lex()
                 statements()
+                genQuad('=', '0', temp, flagquad)
                 if token.typ == ENDDEFAULT:
                     lex()
                     if token.typ == ENDFORCASE:
+                        backpatch(exitList, nextQuad())
                         lex()
                     else:
                         print('File: ', file_to_compile )
@@ -482,42 +588,47 @@ def forcaseStat():
             print ("ERROR: ' default ' expected")
             exit(0)
 
-def afterWhen(): #Function-helper for what follows the "reserved" word "when". 
-    if token.typ == LEFTPARENTH:
-        lex()
-        condition()
-        if token.typ == RIGHTPARENTH:
-            lex()
-            if token.typ == COLON:
-                lex()
-                statements()
-            else:
-                print('File: ', file_to_compile )
-                print ("ERROR near line", token.lin - 1)
-                print ("ERROR AFTER ' when ': ' : ' expected")
-                print (" when (<condition>) : <statements>")
-                exit(0)
-        else:
-            print('File: ', file_to_compile )
-            print ("ERROR near line", token.lin - 1)
-            print ("ERROR AFTER ' when ': ' ) ' expected")
-            print (" when (<condition>) : <statements>")
-            exit(0)
-    else:
-        print('File: ', file_to_compile )
-        print ("ERROR near line", token.lin - 1)
-        print ("ERROR AFTER ' when ': ' ( ' expected")
-        print (" when (<condition>) : <statements>")
-        exit(0)
-
 def incaseStat():
     if token.typ == INCASE:
         lex()
+        temp = newTemp()
+        flagquad = nextQuad()
+        genQuad(':=', '0', '_', temp)
         while token.typ == WHEN:
             lex()
-            afterWhen()
+        
+            if token.typ == LEFTPARENTH:
+                 lex()
+                 (Ctrue, Cfalse) = condition()
+                 if token.typ == RIGHTPARENTH:
+                    lex()
+                    if token.typ == COLON:
+                        lex()
+                        backpatch(Ctrue, nextQuad())
+                        genQuad(':=', 1, '_', temp)
+                        statements()
+                        backpatch(Cfalse, nextQuad())
+                    else:
+                        print('File: ', file_to_compile )
+                        print ("ERROR near line", token.lin - 1)
+                        print ("ERROR AFTER ' when ': ' : ' expected")
+                        print (" when (<condition>) : <statements>")
+                        exit(0)
+                 else:
+                    print('File: ', file_to_compile )
+                    print ("ERROR near line", token.lin - 1)
+                    print ("ERROR AFTER ' when ': ' ) ' expected")
+                    print (" when (<condition>) : <statements>")
+                    exit(0)
+            else:
+                 print('File: ', file_to_compile )
+                 print ("ERROR near line", token.lin - 1)
+                 print ("ERROR AFTER ' when ': ' ( ' expected")
+                 print (" when (<condition>) : <statements>")
+                 exit(0)
         if token.typ == ENDINCASE:
-        	lex()
+            lex()
+            genQuad('=', '1', temp, flagquad)
        	else:
             print('File: ', file_to_compile )
             print ("ERROR near line", token.lin - 1)
@@ -526,15 +637,18 @@ def incaseStat():
 
 def returnStat():   # called
     lex()           # if token == return
-    expression()
+    exp = expression()
+    genQuad('retv', '_', '_', exp,)
 
 def printStat():    # called
     lex()           # if token == print
-    expression()
+    exp = expression()
+    genQuad('out', '_', '_', exp)
 
 def inputStat():
     if token.typ == INPUT:
         lex()
+        genQuad('inp', '_', '_', token.mylist1)
         if token.typ == ID:
         	lex()
         else:
@@ -564,13 +678,16 @@ def actualparlist():
         while token.typ == COMMA:
             lex()
             actualparitem()
-
+            
 def actualparitem():
     if token.typ == IN:
         lex()
-        expression()
+        retval = expression()
+        genQuad('par', retval, 'CV', '_')
     elif token.typ == INOUT:
         lex()
+        retval = token.mylist1
+        genQuad('par', retval, 'REF', '_')
         if token.typ == ID:
         	lex()
         else:
@@ -578,9 +695,10 @@ def actualparitem():
             print ("ERROR near line", token.lin - 1)
             print ("ERROR: After inout, ID expected")
             exit(0)
-       
     elif token.typ == INANDOUT:
         lex()
+        retval = token.mylist1
+        genQuad('par', retval, 'CP', '_')
         if token.typ == ID:
         	lex()
         else:
@@ -593,27 +711,35 @@ def actualparitem():
         print ("ERROR near line", token.lin - 1)
         print ("ERROR: in/inout/inandout expected")
         exit(0)
+    return retval
 
 def condition():
-    boolterm()
+    (Qtrue, Qfalse) = boolterm()
     while token.typ == OR:
         lex()
-        boolterm()
-
+        backpatch(Qfalse, nextQuad())
+        (R2true, R2false) = boolterm()
+        Qtrue = merge(Qtrue, R2true)
+        Qfalse = R2false
+    return (Qtrue, Qfalse)
 
 def boolterm():
-    boolfactor()
+    (Qtrue, Qfalse) = boolfactor()
     while token.typ == AND:
         lex()
-        boolfactor()
-
+        backpatch(Qtrue, nextQuad())
+        (R2true, R2false) = boolfactor()
+        Qfalse = merge(Qfalse, R2false)
+        Qtrue = R2true
+    return (Qtrue, Qfalse)
 
 def boolfactor():
+    retval = ""
     if token.typ == NOT:
         lex()
         if token.typ == LEFTBRACK:
             lex()
-            condition()
+            retval = condition()
             if token.typ == RIGHTBRACK:
             	lex()
             else:
@@ -628,7 +754,7 @@ def boolfactor():
             exit(0)
     elif token.typ == LEFTBRACK:
             lex()
-            condition()
+            retval = condition()
             if not(token.typ == RIGHTBRACK):
                 print('File: ', file_to_compile )
                 print ("ERROR near line", token.lin - 1)
@@ -636,30 +762,41 @@ def boolfactor():
                 exit(0)
             lex()
     else:
-        expression()
-        relationOper()
-        expression()
+        exp1 = expression()
+        op 	= relationOper()
+        exp2 = expression()
+        Btrue = makelist(nextQuad())
+        genQuad(op, exp1, exp2, '_')
+        Bfalse = makelist(nextQuad())
+        genQuad('jump', '_', '_', '_')
+        retval = (Btrue, Bfalse)
+    return retval
        
-def expression():
-
+def expression():	
     optionalSign()
-    term()
-
+    term1 = term()
     while (token.typ == PLUS) or (token.typ == MINUS):
-        addOper()
-        term()
+        op         = addOper()
+        term2 	= term()
+        tempLab = newTemp()
+        genQuad(op, term1, term2, tempLab)
+        term1 	= tempLab
+    return term1
 
 def term():
-    factor()
+    factor1 = factor()
     while (token.typ == TIMES) or (token.typ == DIV):
-        mulOper()
-        factor()
+        op         = mulOper()
+        factor2	= factor()
+        tempLab	= newTemp()
+        genQuad(op, factor1, factor2, tempLab)
+        factor1 = tempLab
+    return factor1
 
 def factor():
-
-    if token.typ == LEFTPARENTH:
+    if token.typ == LEFTPARENTH:        
         lex()
-        expression()
+        retval = expression()
         if not(token.typ == RIGHTPARENTH):
             print('File: ', file_to_compile )
             print ("ERROR near line", token.lin - 1)
@@ -667,18 +804,26 @@ def factor():
             exit(0) 
         lex()   
     elif token.typ == ID:
+        parid = token.mylist1
         lex()
-        idtail()
-    elif token.typ == NUMBER:
+        partail = idtail()        # EDW kati paizei 
+        if (partail == ""):
+            retval = parid
+        else:
+            genQuad('call', parid, '_', '_')
+            retval = partail
+    elif token.typ == NUMBER:	# na prosthesw isws arnitikous/thetikous
+        retval = token.mylist1
         lex()
     else:
         print ("ERROR near line", token.lin - 1)
         print("ERROR (factor):  expected")
         exit(0)
+    return retval
 
 def idtail():
     if token.typ == LEFTPARENTH:
-        actualpars()
+        return actualpars()
 
 def relationOper():
     if not((token.typ == EQUALS) or (token.typ == LESSEQ) or (token.typ == BIGEQ) or (token.typ == BIGGER) or (token.typ == LESS) or (token.typ == DIFF)):
@@ -686,17 +831,23 @@ def relationOper():
         print ("ERROR near line", token.lin - 1)
         print("ERROR: <relational oper> expected")
         exit(0)
+    op = token.mylist1
     lex()
+    return op
 
 def addOper():      # called if token + or -
+    op = token.mylist1
     lex()
+    return op
 
 def mulOper():      # called if token * or /
+    op = token.mylist1
     lex()
+    return op
 
 def optionalSign():
     if  (token.typ == PLUS) or (token.typ == MINUS):
-        addOper()
+        return addOper()
 
 ###  Setting the word type by checking if the word is a reserved word, a reserved symbol, number or a plain id.
 
