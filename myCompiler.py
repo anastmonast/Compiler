@@ -1,8 +1,5 @@
 #!/usr/bin/env python3
 
-# Despoina Kotsidou       
-# Anastasia Monastiridou  
-
 import sys
 file_to_compile = ' '
 firsttime   = 0
@@ -89,145 +86,150 @@ class Quad:
         self.z  = z
 
 
-################		GLOBAL VARIABLES		###############
+################        GLOBAL VARIABLES        ###############
 
 token       = '' #we will keep the token's value here
 quadList    = [] # Quad List
 temps       = 0  # How many temporary variables
-nextQ 		= 0	 # Points to next Quad
-varToDec 	= [] # List of variables to declare for .c file
-scopeList	= []
-exitList	= []
+nextQ         = 0     # Points to next Quad
+varToDec     = [] # List of variables to declare for .c file
+scopeList    = []
+exitList    = []
 startLoopQuad = []
 endLoopQuad = []
 
 
-
-###########		classes for TABLE 	 #############
+###########        classes for TABLE      #############
 
 class Scope:
-	def __init__(self, entPoint, nestLev, scoPoint):
-		self.entPoint 	= entPoint
-		self.nestLev	= nestLev
-		self.scoPoint	= scoPoint
-		self.currOff	= 12
+    def __init__(self, entPoint, nestLev, scoPoint):
+        self.entPoint     = entPoint
+        self.nestLev    = nestLev
+        self.scoPoint    = scoPoint
+        self.currOff    = 12
 
-	def getOffset(self):
-		retval = self.currOff
-		self.currOff += 4
-		return retval
+    def getOffset(self):
+        retval = self.currOff
+        self.currOff += 4
+        return retval
 
 class Argument:
-	def __init__(self, parMode, argPoint):
-		self.parMode 	= parMode
-		self.argPoint	= argPoint
+    def __init__(self, parMode, argPoint):
+        self.parMode     = parMode
+        self.argPoint    = argPoint
 
 class Entity(object):
-	def __init__(self, entName, entType, entPoint):
-		self.entName 	= entName
-		self.entType	= entType
-		self.entPoint	= entPoint
+    def __init__(self, entName, entType, entPoint):
+        self.entName     = entName
+        self.entType    = entType
+        self.entPoint    = entPoint
 
 class Variable(Entity):
-	def __init__(self, name, vOffset):
-		super(Variable, self).__init__(name, 'VAR', None)
-		self.name 	= name
-		self.vOffset 	= vOffset
+    def __init__(self, name, vOffset):
+        super(Variable, self).__init__(name, 'VAR', None)
+        self.name     = name
+        self.vOffset     = vOffset
 
 class Function(Entity):
-	def __init__(self, name, fQuad, fArg, fFramelen):
-		super(Function, self).__init__(name, 'FUNC', None)
-		self.name 	= name
-		self.fQuad 	= fQuad
-		self.fArg	= fArg
-		self.fFramelen = fFramelen
+    def __init__(self, name, fQuad, fArg, fFramelen):
+        super(Function, self).__init__(name, 'FUNC', None)
+        self.name     = name
+        self.fQuad     = fQuad
+        self.fArg    = fArg
+        self.fFramelen = fFramelen
 
 class Const(Entity):
-	def __init__(self, val):
-		super(Const, self).__init__(val, 'CON', None)
-		self.val = val
+    def __init__(self, val):
+        super(Const, self).__init__(val, 'CON', None)
+        self.val = val
 
 
 class Paramet(Entity):
-	def __init__(self, name, parMode, offset):
-		super(Paramet, self).__init__(name, 'PAR', None)
-		self.parMode = parMode
-		self.offset = offset
+    def __init__(self, name, parMode, offset):
+        super(Paramet, self).__init__(name, 'PAR', None)
+        self.parMode = parMode
+        self.offset = offset
 
 class tempVariable(Entity):
-	def __init__(self, name, offset):
-		super(tempVariable, self).__init__(name, 'TEMP', None)
-		self.offset = offset
+    def __init__(self, name, offset):
+        super(tempVariable, self).__init__(name, 'TEMP', None)
+        self.offset = offset
 
 
-#################################################################
-#								#
-#			 SYMBOL TABLE				#
-#								#
-#################################################################
+###########################################################
+#                                                          #
+#                    SYMBOL TABLE                          #
+#                                                          #
+###########################################################
 
 def entityInsert(newEntity):
-	scopeList[-1].entPoint.append(newEntity)
+    scopeList[-1].entPoint.append(newEntity)
 
 def argumentIsert(mode):
-	scopeList[-1].entPoint[-1].fArg.append(Argument(mode, None))
+    scopeList[-1].entPoint[-1].fArg.append(Argument(mode, None))
 
 def scopeInsert():
-	level = scopeList[-1].nestLev + 1
-	pScope = scopeList[-1]
-	newScope = Scope([], level, pScope)
-	scopeList.append(newScope)
+    level = scopeList[-1].nestLev + 1
+    pScope = scopeList[-1]
+    newScope = Scope([], level, pScope)
+    scopeList.append(newScope)
 
 def scopeDelete():
-	scopeList.pop() 
-	return
+    scopeList.pop() 
+    return
 
 def search(name, enttype):
-	if (len(scopeList)) != 0:
-		for i in range(0, len(scopeList)):
-			for entity in scopeList[-(i+1)].entPoint:
-				if entity.entName == name and entity.entType == enttype:
-					return entity
+    if (len(scopeList)) != 0:
+        for i in range(0, len(scopeList)):
+            for entity in scopeList[-(i+1)].entPoint:
+                if entity.entName == name and entity.entType == enttype:
+                    return entity
+def searchEntNest(name):
+    if (len(scopeList)) != 0:
+        for i in range(0, len(scopeList)):
+            for entity in scopeList[-(i+1)].entPoint:
+                if entity.entName == name :
+                    return (entity,i)
 
 def addVarEntity(name):
-	offset = scopeList[-1].getOffset()
-	retval = Variable(name, offset)
-	return retval
+    offset = scopeList[-1].getOffset()
+    retval = Variable(name, offset)
+    return retval
 
 def addFuncEntity(name, quad):
-	retval = Function(name, quad, [], 0)
-	return retval
+    retval = Function(name, quad, [], 0)
+    return retval
 
 def addParEntity(name, parMode):
-	offset = scopeList[-1].getOffset()
-	retval = Paramet(name, parMode, offset)
-	return retval
+    offset = scopeList[-1].getOffset()
+    retval = Paramet(name, parMode, offset)
+    return retval
 
 def addTempEntity(name):
-	offset = scopeList[-1].getOffset()
-	retval = tempVariable(name, offset)
-	return retval
+    offset = scopeList[-1].getOffset()
+    retval = tempVariable(name, offset)
+    return retval
 
 def fillFramelength():
-	if (len(scopeList)) != 0:
-		for i in range(0, len(scopeList)):
-			for entity in scopeList[-(i+1)].entPoint:
-				if entity.entType == 'FUNC':
-					entToFill = entity
-					offset = scopeList[-1].getOffset()
-					entToFill.fFramelen = offset + 4
-					return
+    if (len(scopeList)) != 0:
+        for i in range(0, len(scopeList)):
+            for entity in scopeList[-(i+1)].entPoint:
+                if entity.entType == 'FUNC':
+                    entToFill = entity
+                    offset = scopeList[-1].getOffset()
+                    entToFill.fFramelen = offset + 4
+                    return
 
 def printScopes():
-	for scope in scopeList:
-		print ("SCOPE ")
-		for ent in scope.entPoint:
-			print (ent.entName + ent.entType)
-			if ent.entType == 'FUNC':
-				for i in ent.fArg:
-					print (i.parMode + "  mode")
+    for scope in scopeList:
+        print ("SCOPE ")
+        for ent in scope.entPoint:
+            print (ent.entName + ent.entType)
+            if ent.entType == 'FUNC':
+                for i in ent.fArg:
+                    print (i.parMode + "  mode")
 
-#####################################################################
+################################################################
 
 def nextQuad():
     return nextQ
@@ -272,37 +274,181 @@ def writeToInt():
     file.close()   
 
 def writeToC():
-	cName 	= file_to_compile[:-4] + '.c'
-	fileForC = open(cName, 'w')
-	fileForC.write('#include <stdio.h>\n\n')
-	fileForC.write('int main()\n{\n')
-	varSize = len(varToDec)
-	if (varSize > 0):
-		fileForC.write('int ' + varToDec[0] )
-		for i in range(1, varSize):
-			fileForC.write(', ' + varToDec[i])
-	fileForC.write(';\n')
-	for quad in quadList:
-		fileForC.write('L_' + str(quad.label) + ': ')
-		if (quad.op == ':='):
-			fileForC.write(str(quad.z) + '=' + str(quad.a) + ';\n')
-		elif quad.op == '+' or quad.op == '-' or quad.op == '/' or quad.op == '*':
-			fileForC.write(str(quad.z) + '=' + str(quad.a) + str(quad.op) + str(quad.b) + ';\n')
-		elif quad.op == '<' or quad.op == '>' or quad.op == '<=' or quad.op == '=' or quad.op == '>=' or quad.op == '<>':
-			fileForC.write('if (' + str(quad.a) + str(quad.op) + str(quad.b) + ')' + ' goto ' + 'L_' + str(quad.z) + ';\n')
-		elif (quad.op == 'jump'):
-			fileForC.write('goto ' + 'L_' + str(quad.z) + ';\n')
-		elif(quad.op == 'out'):
-			fileForC.write('printf('+str(quad.z)+');\n')
-		elif(quad.op == 'retv'):
-			fileForC.write('return '+str(quad.z)+';\n')
-		elif(quad.op == 'inp'):
-			fileForC.write('scanf('+str(quad.z)+');\n')
-		else:
-			fileForC.write('{}\n')
+    cName     = file_to_compile[:-4] + '.c'
+    fileForC = open(cName, 'w')
+    fileForC.write('#include <stdio.h>\n\n')
+    fileForC.write('int main()\n{\n')
+    varSize = len(varToDec)
+    if (varSize > 0):
+        fileForC.write('int ' + varToDec[0] )
+        for i in range(1, varSize):
+            fileForC.write(', ' + varToDec[i])
+    fileForC.write(';\n')
+    for quad in quadList:
+        fileForC.write('L_' + str(quad.label) + ': ')
+        if (quad.op == ':='):
+            fileForC.write(str(quad.z) + '=' + str(quad.a) + ';\n')
+        elif quad.op == '+' or quad.op == '-' or quad.op == '/' or quad.op == '*':
+            fileForC.write(str(quad.z) + '=' + str(quad.a) + str(quad.op) + str(quad.b) + ';\n')
+        elif quad.op == '<' or quad.op == '>' or quad.op == '<=' or quad.op == '=' or quad.op == '>=' or quad.op == '<>':
+            fileForC.write('if (' + str(quad.a) + str(quad.op) + str(quad.b) + ')' + ' goto ' + 'L_' + str(quad.z) + ';\n')
+        elif (quad.op == 'jump'):
+            fileForC.write('goto ' + 'L_' + str(quad.z) + ';\n')
+        elif(quad.op == 'out'):
+            fileForC.write('printf('+str(quad.z)+');\n')
+        elif(quad.op == 'retv'):
+            fileForC.write('return '+str(quad.z)+';\n')
+        elif(quad.op == 'inp'):
+            fileForC.write('scanf('+str(quad.z)+');\n')
+        else:
+            fileForC.write('{}\n')
 
-	fileForC.write('}')
-	fileForC.close()
+    fileForC.write('}')
+    fileForC.close()
+
+
+########################################################
+#                                                       #
+#                    MIPS CODE                            #
+#                                                       #
+########################################################
+
+def gnvlcode(v):
+    (tEntity, entLevel) = searchEntNest(v)
+    currLevel = scopeList[-1].nestLev
+    fileForAsm.write('lw $t0, -4($sp)\n')
+
+    for i in range(currLevel - 2, entLevel): # gia endiamesa level
+        fileForAsm.write('lw $t0, -4($t0)\n')
+
+    fileForAsm.write('add $t0,$t0-' + str(vEntity.offset) + '\n')
+
+def loadvr(v,r):
+
+    if str(v).isdigit():
+        fileForAsm.write ('li $t' + str(r) + ',' + v  + '\n')
+    else:
+        try:
+            entity, entLevel = searchEntNest(v)
+        except:
+            printf("Undeclared variable: ", v)
+            exit(0)
+        currLevel = scopeList[-1].nestLev
+        if entity.typ == 'VAR' and entLevel == 0: # main variable
+            fileForAsm.write ('lw $t' + str(r) + ',-' + entity.offset + '($s0)' + '\n')
+        elif (entity.typ == 'VAR' and entLevel == currLevel) \
+                or (entity.typ == 'par' and entity.parMode == 'CV' and entLevel == currLevel)\
+                or (entity.typ == 'TEMP'): # vf = trexon
+            fileForAsm.write ('lw $t' + str(r) + ',-' + entity.offset + '($sp)'+ '\n')    
+        elif (entity.typ == 'par' and entity.parMode == 'REF' and entLevel == currLevel):
+            fileForAsm.write ('lw $t0' + ',-' + entity.offset + '($sp)'+ '\n')
+            fileForAsm.write ('lw $t' + str(r) + ',($t0)' + '\n')
+        elif (entity.typ == 'VAR' and entLevel < currLevel) \
+                or (entity.typ == 'par' and enity.parMode == 'CV' and entLevel < currLevel):
+            gnlvcode(v)
+            fileForAsm.write ('lw $t' + str(r) + ',($t0)'+ '\n')
+        elif (entity.typ == 'par' and entity.parMode == 'REF' and entLevel < currLevel):
+            gnlvcode(v)
+            fileForAsm.write ('lw $t0,($t0)' + '\n')
+            fileForAsm.write ('lw $t' + str(r) +',($t0)\n')
+        else:
+            printf ("ERROR 352 kati paizei")
+            exit(0)
+
+def storerv(r,v):
+    (vEntity, entLevel) = searchEntNest(v)
+    currLev = scopeList[-1].nestLev 
+
+    if vEntity.entType == 'VAR' and entLevel == 0:
+        fileForAsm.write('sw $t'+str(r)+',-'+str(vEntity.offset)+'($s0)\n')
+    elif (vEntity.entType == 'VAR' and entLevel == currLev) or vEntity.entType == 'TEMP' or (vEntity.entType == 'par' and vEntity.parMode == 'CV' and entLev==currLev):
+        fileForAsm.write('sw $t'+str(r)+',-'+str(vEntity.offset)+'($sp)\n')
+    elif vEntity.entType == 'PAR' and vEntity.parMode == 'REF' and entLevel ==currLev:
+        fileForAsm.write('lw $t0,-'+str(vEntity.offset)+'($sp)\n')
+        fileForAsm.write('sw $t'+str(r)+',($t0)\n')
+    elif (v.Entity == 'VAR' or (vEntity.entType == 'par' and vEntity.parMode == 'CV') ) and entLevel<currLev:
+        gnvlcode(v)
+        fileForAsm.write('sw $t'+str(r)+',($t0)\n')
+    elif v.Entity == 'par' and vEntity.parMode == 'REF' and entLevel <currLev:
+        gnvlcode(v)
+        fileForAsm.write('lw $t0,($t0)\n')
+        fileForAsm.write('sw $t'+str(r)+',($t0)\n')
+    else:
+        printf("error 380")
+
+
+
+def mips_code(quad, block_name):
+    global fileForAsm
+    cName     = file_to_compile[:-4] + '.asm'
+    fileForAsm = open(cName, 'w')
+    if (quad.op == 'jump'):
+        fileForAsm.write('j L_' + quad.z + '\n')
+    elif (quad.op>35 and  quad.op<42): # == < > <> <= >=
+        loadvr(quad.a, 1)
+        loadvr(quad.b, 2)
+        if quad.op == EQUALS:
+            fileForAsm.write('beq,$t1,$t2,' + quad.z + '\n')
+        elif quad.op == DIFF:
+            fileForAsm.write('bne,$t1,$t2,' + quad.z + '\n')
+        elif quad.op == BIGGER:
+            fileForAsm.write('bgt,$t1,$t2,' + quad.z + '\n')
+        elif quad.op == LESS:
+            fileForAsm.write('blt,$t1,$t2,' + quad.z + '\n')
+        elif quad.op == BIGEQ:
+            fileForAsm.write('bge,$t1,$t2,' + quad.z + '\n')
+        elif quad.op == LESSEQ:
+            fileForAsm.write('ble,$t1,$t2,' + quad.z + '\n')
+        else:
+            print()
+    elif (quad.op == ASSIGN):
+        loadvr(quad.a, 1)
+        storerv(1, quad.z)
+    elif (quad.op > 41 and quad.op < 46): # + - * /
+        loadvr(quad.a, 1)
+        loadvr(quad.b, 2)
+        if quad.op == PLUS:
+            fileForAsm.write('add $t1,$t1,$t2\n')
+        elif quad.op == MINUS:
+            fileForAsm.write('sub,$t1,$t1,$t2\n')
+        elif quad.op == TIMES:
+            fileForAsm.write('mul,$t1,$t1,$t2\n')
+        elif quad.op == DIV:
+            fileForAsm.write('div,$t1,$t1,$t2\n')
+        else:
+            print()
+
+    elif (quad.op == 'out'):
+        fileForAsm.write('li $v0,1\n')
+        fileForAsm.write('li $a0,' + quad.z + '\n')
+        fileForAsm.write('syscall\n')
+    elif (quad.op == 'in'):
+        fileForAsm.write('li $v0,5\n')
+        fileForAsm.write('syscall\n')
+    elif (quad.op == 'retv'):
+        loadvr(quad.z, 1)
+        fileForAsm.write('lw $t0,-8($sp)\n')
+        fileForAsm.write('sw $t1,($t0)\n')
+    elif (quad.op == 'halt'):
+        print()
+    elif (quad.op == 'par'):
+       # if :
+        	
+        #elif:
+        	
+        #elif:
+
+        #else:
+        print()
+    elif (quad.op == 'call'):
+        print()
+    elif (quad.op == 'begin_block'):
+        print()
+    elif (quad.op == 'end_block'):
+        print()
+    else:
+        print()
+
 
 ########################################################
 #                                                      #
@@ -370,9 +516,9 @@ def declaration():
 
 def varlist():
     if token.typ == ID:
-        varToDec.append(token.mylist1)	# add variables to declare to list
+        varToDec.append(token.mylist1)    # add variables to declare to list
         entityInsert(addVarEntity(token.mylist1))
-        lex()							
+        lex()                            
         while token.typ == COMMA:
             lex()
             if token.typ == ID:
@@ -463,6 +609,7 @@ def formalparitem(name):
         tmpent.fArg.append(Argument('CV', token.mylist1))
         entityInsert(addParEntity(token.mylist1, 'CV'))
         if token.typ == ID:
+            genQuad('par', token.mylist1, 'CV', '_')
             lex()
         else:
             print('File: ', file_to_compile )
@@ -475,6 +622,7 @@ def formalparitem(name):
         tmpent.fArg.append(Argument('REF', token.mylist1))
         entityInsert(addParEntity(token.mylist1,'RED'))
         if token.typ == ID:
+            genQuad('par', token.mylist1, 'REF', '_')
             lex()
         else:
             print('File: ', file_to_compile )
@@ -487,6 +635,7 @@ def formalparitem(name):
         tmpent.fArg.append(Argument('CP', token.mylist1))
         entityInsert(addParEntity(token.mylist1, 'CP'))
         if token.typ == ID:
+            genQuad('par', token.mylist1, 'REF', '_')
             lex()
         else:
             print('File: ', file_to_compile )
@@ -688,9 +837,9 @@ def loopStat():
         endLoopQuad.append(nextQuad())
         if token.typ == ENDLOOP:
             if exitList[-1] != None:
-            	backpatch(exitList[-1], endLoopQuad.pop())
+                backpatch(exitList[-1], endLoopQuad.pop())
             else:
-            	genQuad('jump', '_', '_', startLoopQuad.pop())
+                genQuad('jump', '_', '_', startLoopQuad.pop())
             exitList.pop()
             lex()
         else:
@@ -704,7 +853,7 @@ def loopStat():
         print ("ERROR: ' loop ' expected")
         exit(0)
 
-def exitStat():	# enters if token = EXIT, no need for checking
+def exitStat():    # enters if token = EXIT, no need for checking
     lex()
     tmp = makelist(nextQuad())
     genQuad('jump', '_', '_', '_')
@@ -825,7 +974,7 @@ def incaseStat():
         if token.typ == ENDINCASE:
             lex()
             genQuad('=', '1', temp, flagquad)
-       	else:
+        else:
             print('File: ', file_to_compile )
             print ("ERROR near line", token.lin - 1)
             print ("ERROR: ' endincase ' expected")
@@ -851,7 +1000,7 @@ def inputStat():
         lex()
         genQuad('inp', '_', '_', token.mylist1)
         if token.typ == ID:
-        	lex()
+            lex()
         else:
             print('File: ', file_to_compile )
             print ("ERROR near line", token.lin - 1)
@@ -867,7 +1016,7 @@ def actualpars():
     lex()           # mpainei an exei (
     actualparlist()
     if token.typ == RIGHTPARENTH:
-    	lex()
+        lex()
     else:
         print ("ERROR near line", token.lin - 1)
         print ("ERROR ) expected")
@@ -889,9 +1038,9 @@ def actualparitem():
     elif token.typ == INOUT:
         lex()
         retval = token.mylist1
-        genQuad('par', retval, 'REF', '_')
+        genQuad('S', retval, 'REF', '_')
         if token.typ == ID:
-        	lex()
+            lex()
         else:
             print('File: ', file_to_compile )
             print ("ERROR near line", token.lin - 1)
@@ -902,7 +1051,7 @@ def actualparitem():
         retval = token.mylist1
         genQuad('par', retval, 'CP', '_')
         if token.typ == ID:
-        	lex()
+            lex()
         else:
             print('File: ', file_to_compile )
             print ("ERROR near line", token.lin - 1)
@@ -943,7 +1092,7 @@ def boolfactor():
             lex()
             retval = condition()
             if token.typ == RIGHTBRACK:
-            	lex()
+                lex()
             else:
                 print('File: ', file_to_compile )
                 print ("ERROR near line", token.lin - 1)
@@ -965,7 +1114,7 @@ def boolfactor():
             lex()
     else:
         exp1 = expression()
-        op 	= relationOper()
+        op     = relationOper()
         exp2 = expression()
         Btrue = makelist(nextQuad())
         genQuad(op, exp1, exp2, '_')
@@ -974,23 +1123,23 @@ def boolfactor():
         retval = (Btrue, Bfalse)
     return retval
        
-def expression():	
+def expression():    
     optionalSign()
     term1 = term()
     while (token.typ == PLUS) or (token.typ == MINUS):
         op      = addOper()
-        term2 	= term()
+        term2     = term()
         tempLab = newTemp()
         genQuad(op, term1, term2, tempLab)
-        term1 	= tempLab
+        term1     = tempLab
     return term1
 
 def term():
     factor1 = factor()
     while (token.typ == TIMES) or (token.typ == DIV):
         op         = mulOper()
-        factor2	= factor()
-        tempLab	= newTemp()
+        factor2    = factor()
+        tempLab    = newTemp()
         genQuad(op, factor1, factor2, tempLab)
         factor1 = tempLab
     return factor1
@@ -1014,7 +1163,7 @@ def factor():
         else:
             genQuad('call', parid, '_', '_')
             retval = parid
-    elif token.typ == NUMBER:	# na prosthesw isws arnitikous/thetikous
+    elif token.typ == NUMBER:    # na prosthesw isws arnitikous/thetikous
         entityInsert(Const(token.mylist1))
         retval = token.mylist1
         lex()
@@ -1190,8 +1339,8 @@ def lex():
     global firsttime
     global line
     
-    if firsttime==0:        	#The file needs to be opened once. 
-        file_to_compile = sys.argv[1]	#This variable changes value only once, so as the file.
+    if firsttime==0:            #The file needs to be opened once. 
+        file_to_compile = sys.argv[1]    #This variable changes value only once, so as the file.
         file = open(file_to_compile, 'r')
         firsttime = 1
 
@@ -1235,18 +1384,18 @@ def lex():
                 if len(my_list) > 30:
                     my_list = my_list[:31]
                 state = recog
-                goback = 1	# seek back
+                goback = 1    # seek back
         elif state == 2:    # number
             if not (symbol.isdigit()):
                 state = recog
-                goback = 1	# seek back
+                goback = 1    # seek back
         elif state == 3:    # <= , <> , <
             if not(symbol in ('=', '>')):
-                goback = 1	# seek back
+                goback = 1    # seek back
             state = recog
         elif state == 4:    # >= , >
             if not(symbol == '='):
-                goback = 1;	# seek back
+                goback = 1;    # seek back
             state = recog
         elif state == 5:    # := , :
             if not(symbol == '='):
