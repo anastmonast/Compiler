@@ -91,12 +91,17 @@ class Quad:
 token       = '' #we will keep the token's value here
 quadList    = [] # Quad List
 temps       = 0  # How many temporary variables
-nextQ         = 0     # Points to next Quad
-varToDec     = [] # List of variables to declare for .c file
-scopeList    = []
-exitList    = []
-startLoopQuad = []
-endLoopQuad = []
+nextQ       = 0     # Points to next Quad
+varToDec    = [] # List of variables to declare for .c file
+scopeList   = []
+
+exitList        = []    # exit from loop
+startLoopQuad   = []
+endLoopQuad     = []
+
+namesOfFunction  = [] # keeps name of each function
+parsInFunction   = [] # count pars of each function
+parCounter       = 0
 
 
 ###########        classes for TABLE      #############
@@ -432,8 +437,14 @@ def mips_code(quad, block_name):
     elif (quad.op == 'halt'):
         print()
     elif (quad.op == 'par'):
-       # if :
-        	
+        fentity = search(block_name, 'FUNC')
+        fileForAsm.write('add $fp,$sp,' + fentity.fFramelen  + '\n')
+        if quad.b == 'CV':
+            loadvr(quad.a, 0)
+            if block_name in namesOfFunction:
+                i += 1
+            
+            fileForAsm.write('sw $t0,-(12+4'+  +')($fp)\n' )	
         #elif:
         	
         #elif:
@@ -568,6 +579,7 @@ def funcbody(name):
     block()
 
 def formalpars(name):
+    namesOfFunction.append(name)
     if token.typ == LEFTPARENTH:
         lex()
         formalparlist(name)
@@ -587,6 +599,7 @@ def formalpars(name):
 
 def formalparlist(name):
     if token.typ == IN or token.typ == INOUT or token.typ == INANDOUT:
+        namesOfFunction.append(name)
         formalparitem(name)
         if token.typ == IN or token.typ == INOUT or token.typ == INANDOUT:
             print('File: ', file_to_compile )
@@ -595,6 +608,7 @@ def formalparlist(name):
             exit(0)
         while token.typ == COMMA:
             lex()
+            namesOfFunction.append(name)
             formalparitem(name)
     elif not(token.typ == RIGHTPARENTH):
         print('File: ', file_to_compile )
@@ -603,6 +617,7 @@ def formalparlist(name):
         exit(0)
 
 def formalparitem(name):
+    global parCounter
     if token.typ == IN:
         lex()
         tmpent = search(name, 'FUNC')
@@ -1113,10 +1128,10 @@ def boolfactor():
                 exit(0)
             lex()
     else:
-        exp1 = expression()
+        exp1   = expression()
         op     = relationOper()
-        exp2 = expression()
-        Btrue = makelist(nextQuad())
+        exp2   = expression()
+        Btrue  = makelist(nextQuad())
         genQuad(op, exp1, exp2, '_')
         Bfalse = makelist(nextQuad())
         genQuad('jump', '_', '_', '_')
@@ -1128,10 +1143,10 @@ def expression():
     term1 = term()
     while (token.typ == PLUS) or (token.typ == MINUS):
         op      = addOper()
-        term2     = term()
+        term2   = term()
         tempLab = newTemp()
         genQuad(op, term1, term2, tempLab)
-        term1     = tempLab
+        term1   = tempLab
     return term1
 
 def term():
