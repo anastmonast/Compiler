@@ -480,7 +480,7 @@ def mips_code(quad, block_name):
                 fileForAsm.write('	add $t0,$sp'+ str(tEntity.offset) +'\n')
                 fileForAsm.write('	sw $t0,-8($fp)\n' )
             except:
-                print("ERROR 474")
+                print("ERROR 483")
         elif quad.b == 'CP':
             print()
         else:
@@ -609,7 +609,6 @@ def subprogram():
             funcbody(spname)
             if token.typ == ENDFUNC:
                 genQuad('end_block', spname, '_', '_')
-                
                 lex()
             elif token.typ>1 and token.typ<50:
                 print ("ERROR near line", token.lin - 1)
