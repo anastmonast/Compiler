@@ -269,7 +269,7 @@ def backpatch(listToFill, z):
         quadList[quad].z = z
 
 def writeToInt():
-    filename = sys.argv[1][:-4] + '.int'
+    filename = file_to_compile[:-4] + '.int'
     file = open(filename,'w') 
     global quadList
     for quad in quadList:
@@ -338,25 +338,25 @@ def loadvr(v,r):
             printf("Undeclared variable: ", v)
             exit(0)
         currLevel = scopeList[-1].nestLev
-        if entity.typ == 'VAR' and entLevel == 0: # main variable
+        if (entity.entType == 'VAR' and entLevel == 0): # main variable
             fileForAsm.write ('lw $t' + str(r) + ',-' + entity.offset + '($s0)' + '\n')
-        elif (entity.typ == 'VAR' and entLevel == currLevel) \
-                or (entity.typ == 'par' and entity.parMode == 'CV' and entLevel == currLevel)\
-                or (entity.typ == 'TEMP'): # vf = trexon
+        elif (entity.entType == 'VAR' and entLevel == currLevel) \
+                or (entity.entType == 'par' and entity.parMode == 'CV' and entLevel == currLevel)\
+                or (entity.entType == 'TEMP'): # vf = trexon
             fileForAsm.write ('lw $t' + str(r) + ',-' + entity.offset + '($sp)'+ '\n')    
-        elif (entity.typ == 'par' and entity.parMode == 'REF' and entLevel == currLevel):
+        elif (entity.entType == 'par' and entity.parMode == 'REF' and entLevel == currLevel):
             fileForAsm.write ('lw $t0' + ',-' + entity.offset + '($sp)'+ '\n')
             fileForAsm.write ('lw $t' + str(r) + ',($t0)' + '\n')
-        elif (entity.typ == 'VAR' and entLevel < currLevel) \
-                or (entity.typ == 'par' and enity.parMode == 'CV' and entLevel < currLevel):
+        elif (entity.entType == 'VAR' and entLevel < currLevel) \
+                or (entity.entType == 'par' and enity.parMode == 'CV' and entLevel < currLevel):
             gnlvcode(v)
             fileForAsm.write ('lw $t' + str(r) + ',($t0)'+ '\n')
-        elif (entity.typ == 'par' and entity.parMode == 'REF' and entLevel < currLevel):
+        elif (entity.entType == 'par' and entity.parMode == 'REF' and entLevel < currLevel):
             gnlvcode(v)
             fileForAsm.write ('lw $t0,($t0)' + '\n')
             fileForAsm.write ('lw $t' + str(r) +',($t0)\n')
         else:
-            printf ("ERROR 352 kati paizei")
+            print("ERROR 359 kati paizei")
             exit(0)
 
 def storerv(r,v):
@@ -384,9 +384,11 @@ def mips_code(quad, block_name):
     global fileForAsm
     cName     = file_to_compile[:-4] + '.asm'
     fileForAsm = open(cName, 'w')
+
+    fileForAsm.write('L_' + str(quad.label) + '\n')
     if (quad.op == 'jump'):
         fileForAsm.write('j L_' + quad.z + '\n')
-    elif (quad.op>35 and  quad.op<42): # == < > <> <= >=
+    elif (quad.op == '==' or quad.op == '<' or quad.op == '>' or quad.op == '<>' or quad.op == '<=' or quad.op == '>='): # == < > <> <= >=
         loadvr(quad.a, 1)
         loadvr(quad.b, 2)
         if quad.op == EQUALS:
@@ -406,7 +408,7 @@ def mips_code(quad, block_name):
     elif (quad.op == ASSIGN):
         loadvr(quad.a, 1)
         storerv(1, quad.z)
-    elif (quad.op > 41 and quad.op < 46): # + - * /
+    elif (quad.op == '+' or quad.op == '-' or quad.op == '*' or quad.op == '/'): # + - * /
         loadvr(quad.a, 1)
         loadvr(quad.b, 2)
         if quad.op == PLUS:
@@ -439,7 +441,7 @@ def mips_code(quad, block_name):
            	namesOfFunction.append(block_name)
            	i = 0
         (fentity, fLevel) = searchByName(block_name)
-        fileForAsm.write('add $fp,$sp,' + fentity.fFramelen  + '\n')
+        fileForAsm.write('add $fp,$sp,' + str(fentity.fFramelen)  + '\n')
 
         if quad.b == 'CV':
             loadvr(quad.a, 0)
@@ -473,7 +475,7 @@ def mips_code(quad, block_name):
         	print()
     elif (quad.op == 'call'):
         (fentity, fLevel) = searchByName(block_name)
-        (toCallentity, toCallLevel) = searchByName(block_name)
+        (toCallentity, toCallLevel) = searchByName(quad.a)
         if fLevel == toCallLevel:
             fileForAsm.write('lw $t0,-4($sp)\n')
             fileForAsm.write('sw $t0,-4($fp)\n' )
@@ -485,9 +487,13 @@ def mips_code(quad, block_name):
         fileForAsm.write('jal ' + quad.a + '\n')
         fileForAsm.write('add $sp,$sp-'+ fentity.fFramelen +'\n')
     elif (quad.op == 'begin_block'):
-        print()
+        fileForAsm.write('sw $ra,($sp)\n' )
+        if block_name == file_to_compile[:-4]: # main
+            None
+
     elif (quad.op == 'end_block'):
-        print()
+        if block_name == file_to_compile[:-4]:
+            None
     else:
         print()
 
@@ -604,6 +610,8 @@ def subprogram():
             print ("ERROR near line", token.lin - 1)
             print("' function's ID ' missing ")
             exit(0)
+    for quad in quadList:
+    	mips_code(quad, spname)
         
 def funcbody(name):
     formalpars(name)
