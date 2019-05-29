@@ -100,8 +100,7 @@ startLoopQuad   = []
 endLoopQuad     = []
 
 namesOfFunction  = [] # keeps name of each function
-parsInFunction   = [] # count pars of each function
-parCounter       = 0
+i    = 0
 
 
 ###########        classes for TABLE      #############
@@ -183,13 +182,13 @@ def scopeDelete():
     scopeList.pop() 
     return
 
-def search(name, enttype):
+def searchByType(name, enttype):
     if (len(scopeList)) != 0:
         for i in range(0, len(scopeList)):
             for entity in scopeList[-(i+1)].entPoint:
                 if entity.entName == name and entity.entType == enttype:
-                    return entity
-def searchEntNest(name):
+                    return (entity, i)
+def searchByName(name):
     if (len(scopeList)) != 0:
         for i in range(0, len(scopeList)):
             for entity in scopeList[-(i+1)].entPoint:
@@ -319,7 +318,7 @@ def writeToC():
 ########################################################
 
 def gnvlcode(v):
-    (tEntity, entLevel) = searchEntNest(v)
+    (tEntity, entLevel) = searchByName(v)
     currLevel = scopeList[-1].nestLev
     fileForAsm.write('lw $t0, -4($sp)\n')
 
@@ -334,7 +333,7 @@ def loadvr(v,r):
         fileForAsm.write ('li $t' + str(r) + ',' + v  + '\n')
     else:
         try:
-            entity, entLevel = searchEntNest(v)
+            entity, entLevel = searchByName(v)
         except:
             printf("Undeclared variable: ", v)
             exit(0)
@@ -361,7 +360,7 @@ def loadvr(v,r):
             exit(0)
 
 def storerv(r,v):
-    (vEntity, entLevel) = searchEntNest(v)
+    (vEntity, entLevel) = searchByName(v)
     currLev = scopeList[-1].nestLev 
 
     if vEntity.entType == 'VAR' and entLevel == 0:
@@ -380,8 +379,6 @@ def storerv(r,v):
         fileForAsm.write('sw $t'+str(r)+',($t0)\n')
     else:
         printf("error 380")
-
-
 
 def mips_code(quad, block_name):
     global fileForAsm
@@ -405,7 +402,7 @@ def mips_code(quad, block_name):
         elif quad.op == LESSEQ:
             fileForAsm.write('ble,$t1,$t2,' + quad.z + '\n')
         else:
-            print()
+            None
     elif (quad.op == ASSIGN):
         loadvr(quad.a, 1)
         storerv(1, quad.z)
@@ -421,8 +418,7 @@ def mips_code(quad, block_name):
         elif quad.op == DIV:
             fileForAsm.write('div,$t1,$t1,$t2\n')
         else:
-            print()
-
+            None
     elif (quad.op == 'out'):
         fileForAsm.write('li $v0,1\n')
         fileForAsm.write('li $a0,' + quad.z + '\n')
@@ -437,22 +433,57 @@ def mips_code(quad, block_name):
     elif (quad.op == 'halt'):
         print()
     elif (quad.op == 'par'):
-        fentity = search(block_name, 'FUNC')
+        if block_name in namesOfFunction:
+            i += 1
+        else:
+           	namesOfFunction.append(block_name)
+           	i = 0
+        (fentity, fLevel) = searchByName(block_name)
         fileForAsm.write('add $fp,$sp,' + fentity.fFramelen  + '\n')
+
         if quad.b == 'CV':
             loadvr(quad.a, 0)
-            if block_name in namesOfFunction:
-                i += 1
-            
-            fileForAsm.write('sw $t0,-(12+4'+  +')($fp)\n' )	
-        #elif:
-        	
-        #elif:
-
-        #else:
-        print()
+            fileForAsm.write('sw $t0,-(12+4'+ i +')($fp)\n' )	
+        elif quad.b == 'REF':
+        	try:
+	        	(tEntity, entLevel) = searchByType(quad.a, 'PAR')
+	        	if entLevel == fLevel:
+	        		if tEntity.parMode == 'REF': # me anafora stin F
+	        			fileForAsm.write('lw $t0,-'+ tEntity.offset +'($sp)\n')
+	        			fileForAsm.write('sw $t0,-(12+4'+ i +')($fp)\n' )
+	        		else: # ola ta alla(topiki, me timi, proswrini)
+	        			fileForAsm.write('add $t0,$sp,-'+ tEntity.offset +'\n')
+	        			fileForAsm.write('sw $t0,-(12+4'+ i +')($fp)\n' )
+	        	elif entLevel < fLevel:
+	        		if tEntity.parMode == 'REF': # me anafora stin F
+	        			gnlvcode(quad.a)
+	        			fileForAsm.write('lw $t0,($t0)\n')
+	        			fileForAsm.write('sw $t0,-(12+4'+ i +')($fp)\n' )
+	        		else: # ola ta alla(topiki, me timi, proswrini)
+	        			gnlvcode(quad.a)
+	        			fileForAsm.write('sw $t0,-(12+4'+ i +')($fp)\n' )
+	       	except:
+	       		print("ERROR: Can't find parameter: " + quad.a)      	
+        elif quad.b == 'RET':
+        	fileForAsm.write('add $t0,$sp'+ tEntity.offset +'\n')
+        	fileForAsm.write('sw $t0,-8($fp)\n' )
+        elif quad.b == 'CP':
+        	print()
+        else:
+        	print()
     elif (quad.op == 'call'):
-        print()
+        (fentity, fLevel) = searchByName(block_name)
+        (toCallentity, toCallLevel) = searchByName(block_name)
+        if fLevel == toCallLevel:
+            fileForAsm.write('lw $t0,-4($sp)\n')
+            fileForAsm.write('sw $t0,-4($fp)\n' )
+        elif fLevel < toCallLevel:
+            fileForAsm.write('sw $sp,-4($fp)\n' )
+        else:
+            print()
+        fileForAsm.write('add $sp,$sp'+ fentity.fFramelen +'\n')
+        fileForAsm.write('jal ' + quad.a + '\n')
+        fileForAsm.write('add $sp,$sp-'+ fentity.fFramelen +'\n')
     elif (quad.op == 'begin_block'):
         print()
     elif (quad.op == 'end_block'):
@@ -484,7 +515,7 @@ def program(): #The begining of the syntax analyser.
                 genQuad('end_block', program_name, "_", "_")
                 writeToC()
                 writeToInt()
-                print("****** Congratulations ******\nYour code has been compiled without errors. ")
+                print("\n*********** Congratulations ***********\n\nYour code has been compiled without errors. ")
             else:
                 print('File: ', file_to_compile )
                 print ("ERROR near ", token.mylist1)
@@ -579,7 +610,6 @@ def funcbody(name):
     block()
 
 def formalpars(name):
-    namesOfFunction.append(name)
     if token.typ == LEFTPARENTH:
         lex()
         formalparlist(name)
@@ -596,10 +626,8 @@ def formalpars(name):
         print ("ERROR: ' (  ) ' expected")
         exit(0)
 
-
 def formalparlist(name):
     if token.typ == IN or token.typ == INOUT or token.typ == INANDOUT:
-        namesOfFunction.append(name)
         formalparitem(name)
         if token.typ == IN or token.typ == INOUT or token.typ == INANDOUT:
             print('File: ', file_to_compile )
@@ -608,7 +636,6 @@ def formalparlist(name):
             exit(0)
         while token.typ == COMMA:
             lex()
-            namesOfFunction.append(name)
             formalparitem(name)
     elif not(token.typ == RIGHTPARENTH):
         print('File: ', file_to_compile )
@@ -620,7 +647,7 @@ def formalparitem(name):
     global parCounter
     if token.typ == IN:
         lex()
-        tmpent = search(name, 'FUNC')
+        (tmpent, useless) = searchByType(name, 'FUNC')
         tmpent.fArg.append(Argument('CV', token.mylist1))
         entityInsert(addParEntity(token.mylist1, 'CV'))
         if token.typ == ID:
@@ -633,9 +660,9 @@ def formalparitem(name):
             exit(0)
     elif token.typ == INOUT:
         lex()
-        tmpent = search(name, 'FUNC')
+        (tmpent, useless) = searchByType(name, 'FUNC')
         tmpent.fArg.append(Argument('REF', token.mylist1))
-        entityInsert(addParEntity(token.mylist1,'RED'))
+        entityInsert(addParEntity(token.mylist1,'REF'))
         if token.typ == ID:
             genQuad('par', token.mylist1, 'REF', '_')
             lex()
@@ -646,7 +673,7 @@ def formalparitem(name):
             exit(0)
     elif token.typ == INANDOUT:
         lex()
-        tmpent = search(name)
+        (tmpent, useless) = searchByType(name)
         tmpent.fArg.append(Argument('CP', token.mylist1))
         entityInsert(addParEntity(token.mylist1, 'CP'))
         if token.typ == ID:
@@ -699,7 +726,7 @@ def statement():
     elif token.typ == PRINT:
         printStat()
     else:
-        print()
+        None
 
 def assignmentStat():
     if token.typ == ID:
@@ -843,7 +870,6 @@ def doWhileStat():
 
 def loopStat():
     global exitList, startLoopQuad, endLoopQuad
-  
     exitList.append(None)
     if token.typ == LOOP:
         lex()
@@ -874,7 +900,6 @@ def exitStat():    # enters if token = EXIT, no need for checking
     genQuad('jump', '_', '_', '_')
     exitList[-1] = tmp
     
-
 def forcaseStat():
     if token.typ == FORCASE:
         lex()
@@ -956,7 +981,6 @@ def incaseStat():
         genQuad(':=', '0', '_', temp)
         while token.typ == WHEN:
             lex()
-        
             if token.typ == LEFTPARENTH:
                  lex()
                  (Ctrue, Cfalse) = condition()
@@ -1003,7 +1027,6 @@ def returnStat():   # called
     #printScopes()
     fillFramelength()
     scopeDelete()
-
 
 def printStat():    # called
     lex()           # if token == print
@@ -1173,11 +1196,13 @@ def factor():
         parid = token.mylist1
         lex()
         partail = idtail()
-        if (partail == ""):
-            retval = parid
-        else:
+        if partail:
+            retf = newTemp()
+            genQuad('par', retf, 'RET', '_')
             genQuad('call', parid, '_', '_')
-            retval = parid
+            retval = retf
+        else:
+        	retval = parid
     elif token.typ == NUMBER:    # na prosthesw isws arnitikous/thetikous
         entityInsert(Const(token.mylist1))
         retval = token.mylist1
@@ -1190,7 +1215,10 @@ def factor():
 
 def idtail():
     if token.typ == LEFTPARENTH:
-        return actualpars()
+        actualpars()
+        return True
+    else:
+    	return False
 
 def relationOper():
     if not((token.typ == EQUALS) or (token.typ == LESSEQ) or (token.typ == BIGEQ) or (token.typ == BIGGER) or (token.typ == LESS) or (token.typ == DIFF)):
