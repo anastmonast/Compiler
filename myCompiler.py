@@ -277,6 +277,7 @@ def writeToInt():
     for quad in quadList:
         quad.label = len(updateQuadList)
         updateQuadList.append(quad)
+        mips_code(quad, file_to_compile[:-4])
     for quad in updateQuadList:
         file.write(str(quad.label) + ': ' + str(quad.op)+' '+ str(quad.a)+' '+ str(quad.b)+' '+ str(quad.z)+'\n')
 
@@ -314,7 +315,6 @@ def writeToC():
 
     fileForC.write('}')
     fileForC.close()
-
 
 ########################################################
 #                                                       #
@@ -386,7 +386,6 @@ def storerv(r,v):
         printf("error 380")
 
 def mips_code(quad, block_name):
-    print("POSES FORES\n")
     global fileForAsm, i, firsttime
     if firsttime == 1:
     	filename   = file_to_compile[:-4] + '.asm'
@@ -502,8 +501,8 @@ def mips_code(quad, block_name):
     elif (quad.op == 'begin_block'):
         fileForAsm.write('	sw $ra,($sp)\n' )
         if block_name == file_to_compile[:-4]: # main
-            print("Aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa")
             fileForAsm.write('Lmain:\n')
+            #fileForAsm.write('	add $sp,$sp'+ str(fentity.fFramelen) +'\n')
 
     elif (quad.op == 'end_block'):
         if block_name == file_to_compile[:-4]:
@@ -634,6 +633,7 @@ def subprogram():
                     if quadList[j] not in updateQuadList:
                         quadList[j].label = len(updateQuadList)
                         updateQuadList.append(quadList[j])
+                        mips_code(quadList[j], spname)
                	del quadList[i:]
                 break
         
