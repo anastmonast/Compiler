@@ -150,7 +150,7 @@ class Const(Entity):
 
 class Paramet(Entity):
     def __init__(self, name, parMode, offset):
-        super(Paramet, self).__init__(name, 'PAR', None)
+        super(Paramet, self).__init__(name, 'par', None)
         self.parMode = parMode
         self.offset = offset
 
@@ -317,7 +317,7 @@ def writeToC():
 #                                                       #
 ########################################################
 
-def gnvlcode(v):
+def gnlvcode(v):
     (tEntity, entLevel) = searchByName(v)
     currLevel = scopeList[-1].nestLev
     fileForAsm.write('lw $t0, -4($sp)\n')
@@ -325,7 +325,7 @@ def gnvlcode(v):
     for i in range(currLevel - 2, entLevel): # gia endiamesa level
         fileForAsm.write('lw $t0, -4($t0)\n')
 
-    fileForAsm.write('add $t0,$t0-' + str(vEntity.offset) + '\n')
+    fileForAsm.write('add $t0,$t0-' + str(tEntity.offset) + '\n')
 
 def loadvr(v,r):
 
@@ -348,7 +348,7 @@ def loadvr(v,r):
             fileForAsm.write ('lw $t0' + ',-' + entity.offset + '($sp)'+ '\n')
             fileForAsm.write ('lw $t' + str(r) + ',($t0)' + '\n')
         elif (entity.entType == 'VAR' and entLevel < currLevel) \
-                or (entity.entType == 'par' and enity.parMode == 'CV' and entLevel < currLevel):
+                or (entity.entType == 'par' and entity.parMode == 'CV' and entLevel < currLevel):
             gnlvcode(v)
             fileForAsm.write ('lw $t' + str(r) + ',($t0)'+ '\n')
         elif (entity.entType == 'par' and entity.parMode == 'REF' and entLevel < currLevel):
@@ -365,22 +365,23 @@ def storerv(r,v):
 
     if vEntity.entType == 'VAR' and entLevel == 0:
         fileForAsm.write('sw $t'+str(r)+',-'+str(vEntity.offset)+'($s0)\n')
-    elif (vEntity.entType == 'VAR' and entLevel == currLev) or vEntity.entType == 'TEMP' or (vEntity.entType == 'par' and vEntity.parMode == 'CV' and entLev==currLev):
+    elif (vEntity.entType == 'VAR' and entLevel == currLev) or (vEntity.entType == 'TEMP') or (vEntity.entType == 'par' and vEntity.parMode == 'CV' and entLev==currLev):
         fileForAsm.write('sw $t'+str(r)+',-'+str(vEntity.offset)+'($sp)\n')
     elif vEntity.entType == 'PAR' and vEntity.parMode == 'REF' and entLevel ==currLev:
         fileForAsm.write('lw $t0,-'+str(vEntity.offset)+'($sp)\n')
         fileForAsm.write('sw $t'+str(r)+',($t0)\n')
     elif (v.Entity == 'VAR' or (vEntity.entType == 'par' and vEntity.parMode == 'CV') ) and entLevel<currLev:
-        gnvlcode(v)
+        gnlvcode(v)
         fileForAsm.write('sw $t'+str(r)+',($t0)\n')
     elif v.Entity == 'par' and vEntity.parMode == 'REF' and entLevel <currLev:
-        gnvlcode(v)
+        gnlvcode(v)
         fileForAsm.write('lw $t0,($t0)\n')
         fileForAsm.write('sw $t'+str(r)+',($t0)\n')
     else:
         printf("error 380")
 
 def mips_code(quad, block_name):
+    print("POSES FORES\n")
     global fileForAsm
     cName     = file_to_compile[:-4] + '.asm'
     fileForAsm = open(cName, 'w')
@@ -445,25 +446,25 @@ def mips_code(quad, block_name):
 
         if quad.b == 'CV':
             loadvr(quad.a, 0)
-            fileForAsm.write('sw $t0,-(12+4'+ i +')($fp)\n' )	
+            fileForAsm.write('sw $t0,-(12+4'+ str(i) +')($fp)\n' )	
         elif quad.b == 'REF':
         	try:
 	        	(tEntity, entLevel) = searchByType(quad.a, 'PAR')
 	        	if entLevel == fLevel:
 	        		if tEntity.parMode == 'REF': # me anafora stin F
 	        			fileForAsm.write('lw $t0,-'+ tEntity.offset +'($sp)\n')
-	        			fileForAsm.write('sw $t0,-(12+4'+ i +')($fp)\n' )
+	        			fileForAsm.write('sw $t0,-(12+4'+ str(i) +')($fp)\n' )
 	        		else: # ola ta alla(topiki, me timi, proswrini)
 	        			fileForAsm.write('add $t0,$sp,-'+ tEntity.offset +'\n')
-	        			fileForAsm.write('sw $t0,-(12+4'+ i +')($fp)\n' )
+	        			fileForAsm.write('sw $t0,-(12+4'+ str(i) +')($fp)\n' )
 	        	elif entLevel < fLevel:
 	        		if tEntity.parMode == 'REF': # me anafora stin F
 	        			gnlvcode(quad.a)
 	        			fileForAsm.write('lw $t0,($t0)\n')
-	        			fileForAsm.write('sw $t0,-(12+4'+ i +')($fp)\n' )
+	        			fileForAsm.write('sw $t0,-(12+4'+ str(i) +')($fp)\n' )
 	        		else: # ola ta alla(topiki, me timi, proswrini)
 	        			gnlvcode(quad.a)
-	        			fileForAsm.write('sw $t0,-(12+4'+ i +')($fp)\n' )
+	        			fileForAsm.write('sw $t0,-(12+4'+ str(i) +')($fp)\n' )
 	       	except:
 	       		print("ERROR: Can't find parameter: " + quad.a)      	
         elif quad.b == 'RET':
@@ -1084,7 +1085,7 @@ def actualparitem():
     elif token.typ == INOUT:
         lex()
         retval = token.mylist1
-        genQuad('S', retval, 'REF', '_')
+        genQuad('par', retval, 'REF', '_')
         if token.typ == ID:
             lex()
         else:
