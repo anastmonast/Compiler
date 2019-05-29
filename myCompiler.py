@@ -99,10 +99,10 @@ exitList        = []    # exit from loop
 startLoopQuad   = []
 endLoopQuad     = []
 
-namesOfFunction  = [] # keeps name of each function
+namesOfFunction  = [] # keeps name of each function helper to count parameters
 i    = 0
 
-
+updateQuadList	= []
 ###########        classes for TABLE      #############
 
 class Scope:
@@ -129,10 +129,10 @@ class Entity(object):
         self.entPoint    = entPoint
 
 class Variable(Entity):
-    def __init__(self, name, vOffset):
+    def __init__(self, name, offset):
         super(Variable, self).__init__(name, 'VAR', None)
         self.name     = name
-        self.vOffset     = vOffset
+        self.offset     = offset
 
 class Function(Entity):
     def __init__(self, name, fQuad, fArg, fFramelen):
@@ -150,7 +150,7 @@ class Const(Entity):
 
 class Paramet(Entity):
     def __init__(self, name, parMode, offset):
-        super(Paramet, self).__init__(name, 'par', None)
+        super(Paramet, self).__init__(name, 'PAR', None)
         self.parMode = parMode
         self.offset = offset
 
@@ -188,6 +188,7 @@ def searchByType(name, enttype):
             for entity in scopeList[-(i+1)].entPoint:
                 if entity.entName == name and entity.entType == enttype:
                     return (entity, i)
+
 def searchByName(name):
     if (len(scopeList)) != 0:
         for i in range(0, len(scopeList)):
@@ -243,6 +244,7 @@ def genQuad(op, x, y, z):
     newQuad = Quad(nextQ, op, x, y, z)
     quadList.append(newQuad)
     nextQ += 1
+    return newQuad
 
 def newTemp():
     global temps
@@ -269,10 +271,13 @@ def backpatch(listToFill, z):
         quadList[quad].z = z
 
 def writeToInt():
+    global quadList, fileForAsm, updateQuadList
     filename = file_to_compile[:-4] + '.int'
     file = open(filename,'w') 
-    global quadList
     for quad in quadList:
+        quad.label = len(updateQuadList)
+        updateQuadList.append(quad)
+    for quad in updateQuadList:
         file.write(str(quad.label) + ': ' + str(quad.op)+' '+ str(quad.a)+' '+ str(quad.b)+' '+ str(quad.z)+'\n')
 
     file.close()   
@@ -320,17 +325,17 @@ def writeToC():
 def gnlvcode(v):
     (tEntity, entLevel) = searchByName(v)
     currLevel = scopeList[-1].nestLev
-    fileForAsm.write('lw $t0, -4($sp)\n')
+    fileForAsm.write('	lw $t0, -4($sp)\n')
 
     for i in range(currLevel - 2, entLevel): # gia endiamesa level
-        fileForAsm.write('lw $t0, -4($t0)\n')
+        fileForAsm.write('	lw $t0, -4($t0)\n')
 
-    fileForAsm.write('add $t0,$t0-' + str(tEntity.offset) + '\n')
+    fileForAsm.write('	add $t0,$t0-' + str(tEntity.offset) + '\n')
 
 def loadvr(v,r):
 
     if str(v).isdigit():
-        fileForAsm.write ('li $t' + str(r) + ',' + v  + '\n')
+        fileForAsm.write ('	li $t' + str(r) + ',' + v  + '\n')
     else:
         try:
             entity, entLevel = searchByName(v)
@@ -339,22 +344,22 @@ def loadvr(v,r):
             exit(0)
         currLevel = scopeList[-1].nestLev
         if (entity.entType == 'VAR' and entLevel == 0): # main variable
-            fileForAsm.write ('lw $t' + str(r) + ',-' + entity.offset + '($s0)' + '\n')
+            fileForAsm.write ('	lw $t' + str(r) + ',-' + str(entity.offset) + '($s0)' + '\n')
         elif (entity.entType == 'VAR' and entLevel == currLevel) \
-                or (entity.entType == 'par' and entity.parMode == 'CV' and entLevel == currLevel)\
+                or (entity.entType == 'PAR' and entity.parMode == 'CV' and entLevel == currLevel)\
                 or (entity.entType == 'TEMP'): # vf = trexon
-            fileForAsm.write ('lw $t' + str(r) + ',-' + entity.offset + '($sp)'+ '\n')    
-        elif (entity.entType == 'par' and entity.parMode == 'REF' and entLevel == currLevel):
-            fileForAsm.write ('lw $t0' + ',-' + entity.offset + '($sp)'+ '\n')
-            fileForAsm.write ('lw $t' + str(r) + ',($t0)' + '\n')
+            fileForAsm.write ('	lw $t' + str(r) + ',-' + str(entity.offset) + '($sp)'+ '\n')    
+        elif (entity.entType == 'PAR' and entity.parMode == 'REF' and entLevel == currLevel):
+            fileForAsm.write ('	lw $t0' + ',-' + str(entity.offset) + '($sp)'+ '\n')
+            fileForAsm.write ('	lw $t' + str(r) + ',($t0)' + '\n')
         elif (entity.entType == 'VAR' and entLevel < currLevel) \
-                or (entity.entType == 'par' and entity.parMode == 'CV' and entLevel < currLevel):
+                or (entity.entType == 'PAR' and entity.parMode == 'CV' and entLevel < currLevel):
             gnlvcode(v)
-            fileForAsm.write ('lw $t' + str(r) + ',($t0)'+ '\n')
-        elif (entity.entType == 'par' and entity.parMode == 'REF' and entLevel < currLevel):
+            fileForAsm.write ('	lw $t' + str(r) + ',($t0)'+ '\n')
+        elif (entity.entType == 'PAR' and entity.parMode == 'REF' and entLevel < currLevel):
             gnlvcode(v)
-            fileForAsm.write ('lw $t0,($t0)' + '\n')
-            fileForAsm.write ('lw $t' + str(r) +',($t0)\n')
+            fileForAsm.write ('	lw $t0,($t0)' + '\n')
+            fileForAsm.write ('	lw $t' + str(r) +',($t0)\n')
         else:
             print("ERROR 359 kati paizei")
             exit(0)
@@ -364,46 +369,49 @@ def storerv(r,v):
     currLev = scopeList[-1].nestLev 
 
     if vEntity.entType == 'VAR' and entLevel == 0:
-        fileForAsm.write('sw $t'+str(r)+',-'+str(vEntity.offset)+'($s0)\n')
-    elif (vEntity.entType == 'VAR' and entLevel == currLev) or (vEntity.entType == 'TEMP') or (vEntity.entType == 'par' and vEntity.parMode == 'CV' and entLev==currLev):
-        fileForAsm.write('sw $t'+str(r)+',-'+str(vEntity.offset)+'($sp)\n')
+        fileForAsm.write('	sw $t'+str(r)+',-'+str(vEntity.offset)+'($s0)\n')
+    elif (vEntity.entType == 'VAR' and entLevel == currLev) or (vEntity.entType == 'TEMP') or (vEntity.entType == 'PAR' and vEntity.parMode == 'CV' and entLev==currLev):
+        fileForAsm.write('	sw $t'+str(r)+',-'+str(vEntity.offset)+'($sp)\n')
     elif vEntity.entType == 'PAR' and vEntity.parMode == 'REF' and entLevel ==currLev:
-        fileForAsm.write('lw $t0,-'+str(vEntity.offset)+'($sp)\n')
-        fileForAsm.write('sw $t'+str(r)+',($t0)\n')
-    elif (v.Entity == 'VAR' or (vEntity.entType == 'par' and vEntity.parMode == 'CV') ) and entLevel<currLev:
+        fileForAsm.write('	lw $t0,-'+str(vEntity.offset)+'($sp)\n')
+        fileForAsm.write('	sw $t'+str(r)+',($t0)\n')
+    elif (v.Entity == 'VAR' or (vEntity.entType == 'PAR' and vEntity.parMode == 'CV') ) and entLevel<currLev:
         gnlvcode(v)
-        fileForAsm.write('sw $t'+str(r)+',($t0)\n')
-    elif v.Entity == 'par' and vEntity.parMode == 'REF' and entLevel <currLev:
+        fileForAsm.write('	sw $t'+str(r)+',($t0)\n')
+    elif v.Entity == 'PAR' and vEntity.parMode == 'REF' and entLevel <currLev:
         gnlvcode(v)
-        fileForAsm.write('lw $t0,($t0)\n')
-        fileForAsm.write('sw $t'+str(r)+',($t0)\n')
+        fileForAsm.write('	lw $t0,($t0)\n')
+        fileForAsm.write('	sw $t'+str(r)+',($t0)\n')
     else:
         printf("error 380")
 
 def mips_code(quad, block_name):
     print("POSES FORES\n")
-    global fileForAsm
-    cName     = file_to_compile[:-4] + '.asm'
-    fileForAsm = open(cName, 'w')
+    global fileForAsm, i, firsttime
+    if firsttime == 1:
+    	filename   = file_to_compile[:-4] + '.asm'
+    	fileForAsm = open(filename, 'w')
+    	firsttime = 2
+    	fileForAsm.write('L:\n 	j Lmain\n')
 
-    fileForAsm.write('L_' + str(quad.label) + '\n')
+    fileForAsm.write('L_' + str(quad.label) + ':\n')
     if (quad.op == 'jump'):
-        fileForAsm.write('j L_' + quad.z + '\n')
+        fileForAsm.write('	j L_' + str(quad.z) + '\n')
     elif (quad.op == '==' or quad.op == '<' or quad.op == '>' or quad.op == '<>' or quad.op == '<=' or quad.op == '>='): # == < > <> <= >=
         loadvr(quad.a, 1)
         loadvr(quad.b, 2)
         if quad.op == EQUALS:
-            fileForAsm.write('beq,$t1,$t2,' + quad.z + '\n')
+            fileForAsm.write('	beq,$t1,$t2,' + str(quad.z) + '\n')
         elif quad.op == DIFF:
-            fileForAsm.write('bne,$t1,$t2,' + quad.z + '\n')
+            fileForAsm.write('	bne,$t1,$t2,' + quad.z + '\n')
         elif quad.op == BIGGER:
-            fileForAsm.write('bgt,$t1,$t2,' + quad.z + '\n')
+            fileForAsm.write('	bgt,$t1,$t2,' + quad.z + '\n')
         elif quad.op == LESS:
-            fileForAsm.write('blt,$t1,$t2,' + quad.z + '\n')
+            fileForAsm.write('	blt,$t1,$t2,' + quad.z + '\n')
         elif quad.op == BIGEQ:
-            fileForAsm.write('bge,$t1,$t2,' + quad.z + '\n')
+            fileForAsm.write('	bge,$t1,$t2,' + quad.z + '\n')
         elif quad.op == LESSEQ:
-            fileForAsm.write('ble,$t1,$t2,' + quad.z + '\n')
+            fileForAsm.write('	ble,$t1,$t2,' + quad.z + '\n')
         else:
             None
     elif (quad.op == ASSIGN):
@@ -413,84 +421,89 @@ def mips_code(quad, block_name):
         loadvr(quad.a, 1)
         loadvr(quad.b, 2)
         if quad.op == PLUS:
-            fileForAsm.write('add $t1,$t1,$t2\n')
+            fileForAsm.write('	add $t1,$t1,$t2\n')
         elif quad.op == MINUS:
-            fileForAsm.write('sub,$t1,$t1,$t2\n')
+            fileForAsm.write('	sub,$t1,$t1,$t2\n')
         elif quad.op == TIMES:
-            fileForAsm.write('mul,$t1,$t1,$t2\n')
+            fileForAsm.write('	mul,$t1,$t1,$t2\n')
         elif quad.op == DIV:
-            fileForAsm.write('div,$t1,$t1,$t2\n')
+            fileForAsm.write('	div,$t1,$t1,$t2\n')
         else:
             None
     elif (quad.op == 'out'):
-        fileForAsm.write('li $v0,1\n')
-        fileForAsm.write('li $a0,' + quad.z + '\n')
-        fileForAsm.write('syscall\n')
+        fileForAsm.write('	li $v0,1\n')
+        fileForAsm.write('	li $a0,' + quad.z + '\n')
+        fileForAsm.write('	syscall\n')
     elif (quad.op == 'in'):
-        fileForAsm.write('li $v0,5\n')
-        fileForAsm.write('syscall\n')
+        fileForAsm.write('	li $v0,5\n')
+        fileForAsm.write('	syscall\n')
     elif (quad.op == 'retv'):
         loadvr(quad.z, 1)
-        fileForAsm.write('lw $t0,-8($sp)\n')
-        fileForAsm.write('sw $t1,($t0)\n')
+        fileForAsm.write('	lw $t0,-8($sp)\n')
+        fileForAsm.write('	sw $t1,($t0)\n')
     elif (quad.op == 'halt'):
         print()
-    elif (quad.op == 'par'):
+    elif (quad.op == 'PAR'):
         if block_name in namesOfFunction:
             i += 1
         else:
            	namesOfFunction.append(block_name)
            	i = 0
         (fentity, fLevel) = searchByName(block_name)
-        fileForAsm.write('add $fp,$sp,' + str(fentity.fFramelen)  + '\n')
+        fileForAsm.write('	add $fp,$sp,' + str(fentity.fFramelen)  + '\n')
 
         if quad.b == 'CV':
             loadvr(quad.a, 0)
-            fileForAsm.write('sw $t0,-(12+4'+ str(i) +')($fp)\n' )	
+            fileForAsm.write('	sw $t0,-(12+4'+ str(i) +')($fp)\n' )	
         elif quad.b == 'REF':
         	try:
 	        	(tEntity, entLevel) = searchByType(quad.a, 'PAR')
 	        	if entLevel == fLevel:
 	        		if tEntity.parMode == 'REF': # me anafora stin F
-	        			fileForAsm.write('lw $t0,-'+ tEntity.offset +'($sp)\n')
-	        			fileForAsm.write('sw $t0,-(12+4'+ str(i) +')($fp)\n' )
+	        			fileForAsm.write('	lw $t0,-'+ str(tEntity.offset) +'($sp)\n')
+	        			fileForAsm.write('	sw $t0,-(12+4'+ str(i) +')($fp)\n' )
 	        		else: # ola ta alla(topiki, me timi, proswrini)
-	        			fileForAsm.write('add $t0,$sp,-'+ tEntity.offset +'\n')
-	        			fileForAsm.write('sw $t0,-(12+4'+ str(i) +')($fp)\n' )
+	        			fileForAsm.write('	add $t0,$sp,-'+ str(tEntity.offset) +'\n')
+	        			fileForAsm.write('	sw $t0,-(12+4'+ str(i) +')($fp)\n' )
 	        	elif entLevel < fLevel:
 	        		if tEntity.parMode == 'REF': # me anafora stin F
 	        			gnlvcode(quad.a)
-	        			fileForAsm.write('lw $t0,($t0)\n')
-	        			fileForAsm.write('sw $t0,-(12+4'+ str(i) +')($fp)\n' )
+	        			fileForAsm.write('	lw $t0,($t0)\n')
+	        			fileForAsm.write('	sw $t0,-(12+4'+ str(i) +')($fp)\n' )
 	        		else: # ola ta alla(topiki, me timi, proswrini)
 	        			gnlvcode(quad.a)
-	        			fileForAsm.write('sw $t0,-(12+4'+ str(i) +')($fp)\n' )
+	        			fileForAsm.write('	sw $t0,-(12+4'+ str(i) +')($fp)\n' )
 	       	except:
 	       		print("ERROR: Can't find parameter: " + quad.a)      	
         elif quad.b == 'RET':
-        	fileForAsm.write('add $t0,$sp'+ tEntity.offset +'\n')
-        	fileForAsm.write('sw $t0,-8($fp)\n' )
+            try:
+                (tEntity, entLevel) = searchByType(quad.a, 'PAR')
+                fileForAsm.write('	add $t0,$sp'+ str(tEntity.offset) +'\n')
+                fileForAsm.write('	sw $t0,-8($fp)\n' )
+            except:
+                print("ERROR 474")
         elif quad.b == 'CP':
-        	print()
+            print()
         else:
         	print()
     elif (quad.op == 'call'):
         (fentity, fLevel) = searchByName(block_name)
-        (toCallentity, toCallLevel) = searchByName(quad.a)
+        (toCallentity, toCallLevel) = searchByName(str(quad.a))
         if fLevel == toCallLevel:
-            fileForAsm.write('lw $t0,-4($sp)\n')
-            fileForAsm.write('sw $t0,-4($fp)\n' )
+            fileForAsm.write('	lw $t0,-4($sp)\n')
+            fileForAsm.write('	sw $t0,-4($fp)\n' )
         elif fLevel < toCallLevel:
-            fileForAsm.write('sw $sp,-4($fp)\n' )
+            fileForAsm.write('	sw $sp,-4($fp)\n' )
         else:
             print()
-        fileForAsm.write('add $sp,$sp'+ fentity.fFramelen +'\n')
-        fileForAsm.write('jal ' + quad.a + '\n')
-        fileForAsm.write('add $sp,$sp-'+ fentity.fFramelen +'\n')
+        fileForAsm.write('	add $sp,$sp'+ str(fentity.fFramelen) +'\n')
+        fileForAsm.write('	jal ' + str(quad.a) + '\n')
+        fileForAsm.write('	add $sp,$sp-'+ str(fentity.fFramelen) +'\n')
     elif (quad.op == 'begin_block'):
-        fileForAsm.write('sw $ra,($sp)\n' )
+        fileForAsm.write('	sw $ra,($sp)\n' )
         if block_name == file_to_compile[:-4]: # main
-            None
+            print("Aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa")
+            fileForAsm.write('Lmain:\n')
 
     elif (quad.op == 'end_block'):
         if block_name == file_to_compile[:-4]:
@@ -540,6 +553,7 @@ def program(): #The begining of the syntax analyser.
         print ("' program ' expected")
         exit(0)
 
+ 
 def block():
     if token.typ == DECLAR:
         declaration()
@@ -596,6 +610,7 @@ def subprogram():
             funcbody(spname)
             if token.typ == ENDFUNC:
                 genQuad('end_block', spname, '_', '_')
+                
                 lex()
             elif token.typ>1 and token.typ<50:
                 print ("ERROR near line", token.lin - 1)
@@ -611,8 +626,17 @@ def subprogram():
             print ("ERROR near line", token.lin - 1)
             print("' function's ID ' missing ")
             exit(0)
-    for quad in quadList:
-    	mips_code(quad, spname)
+
+        global updateQuadList
+        for i in range(0, len(quadList)):
+            if quadList[i] == quad:
+                for j in range(i, len(quadList)):
+                    if quadList[j] not in updateQuadList:
+                        quadList[j].label = len(updateQuadList)
+                        updateQuadList.append(quadList[j])
+               	del quadList[i:]
+                break
+        
         
 def funcbody(name):
     formalpars(name)
@@ -660,7 +684,7 @@ def formalparitem(name):
         tmpent.fArg.append(Argument('CV', token.mylist1))
         entityInsert(addParEntity(token.mylist1, 'CV'))
         if token.typ == ID:
-            genQuad('par', token.mylist1, 'CV', '_')
+            genQuad('PAR', token.mylist1, 'CV', '_')
             lex()
         else:
             print('File: ', file_to_compile )
@@ -673,7 +697,7 @@ def formalparitem(name):
         tmpent.fArg.append(Argument('REF', token.mylist1))
         entityInsert(addParEntity(token.mylist1,'REF'))
         if token.typ == ID:
-            genQuad('par', token.mylist1, 'REF', '_')
+            genQuad('PAR', token.mylist1, 'REF', '_')
             lex()
         else:
             print('File: ', file_to_compile )
@@ -686,7 +710,7 @@ def formalparitem(name):
         tmpent.fArg.append(Argument('CP', token.mylist1))
         entityInsert(addParEntity(token.mylist1, 'CP'))
         if token.typ == ID:
-            genQuad('par', token.mylist1, 'REF', '_')
+            genQuad('PAR', token.mylist1, 'REF', '_')
             lex()
         else:
             print('File: ', file_to_compile )
@@ -1035,7 +1059,7 @@ def returnStat():   # called
     entityInsert(addTempEntity(exp))
     #printScopes()
     fillFramelength()
-    scopeDelete()
+ 
 
 def printStat():    # called
     lex()           # if token == print
@@ -1081,11 +1105,11 @@ def actualparitem():
     if token.typ == IN:
         lex()
         retval = expression()
-        genQuad('par', retval, 'CV', '_')
+        genQuad('PAR', retval, 'CV', '_')
     elif token.typ == INOUT:
         lex()
         retval = token.mylist1
-        genQuad('par', retval, 'REF', '_')
+        genQuad('PAR', retval, 'REF', '_')
         if token.typ == ID:
             lex()
         else:
@@ -1096,7 +1120,7 @@ def actualparitem():
     elif token.typ == INANDOUT:
         lex()
         retval = token.mylist1
-        genQuad('par', retval, 'CP', '_')
+        genQuad('PAR', retval, 'CP', '_')
         if token.typ == ID:
             lex()
         else:
@@ -1207,7 +1231,7 @@ def factor():
         partail = idtail()
         if partail:
             retf = newTemp()
-            genQuad('par', retf, 'RET', '_')
+            genQuad('PAR', retf, 'RET', '_')
             genQuad('call', parid, '_', '_')
             retval = retf
         else:
